@@ -70,11 +70,11 @@ export const Summary: React.FC<SummaryProps> = ({
       className="space-y-0 pb-24 max-w-lg mx-auto"
     >
       {/* Modern Professional Header */}
-      <header className="bg-slate-900 text-white p-6 pb-12 rounded-b-[3.5rem] shadow-2xl relative overflow-hidden">
+      <header className="bg-slate-900 text-white p-6 pb-6 rounded-b-[2.5rem] shadow-2xl relative overflow-hidden">
         {/* Background Decorative Elements */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full -mr-32 -mt-32 blur-[100px]"></div>
         
-        <div className="flex justify-between items-center mb-6 relative z-10">
+        <div className="flex justify-between items-center mb-2 relative z-10">
           <div className="flex items-center gap-3">
             <button 
               onClick={() => {

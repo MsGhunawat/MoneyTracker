@@ -87,15 +87,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="space-y-0 pb-20"
+      className="space-y-0 pb-1"
     >
       {/* Modern Professional Header */}
-      <header className="bg-slate-900 text-white p-6 pb-12 rounded-b-[3.5rem] shadow-2xl relative overflow-hidden">
+      <header className="bg-slate-900 text-white p-6 pb-4 rounded-b-[2.5rem] shadow-2xl relative overflow-hidden">
         {/* Background Decorative Elements */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full -mr-32 -mt-32 blur-[100px]"></div>
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-emerald-500/5 rounded-full -ml-24 -mb-24 blur-[80px]"></div>
         
-        <div className="flex justify-between items-center mb-6 relative z-10">
+        <div className="flex justify-between items-center mb-2 relative z-10">
           <div>
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.25em] mb-1">SpendWise Premium</p>
             <h1 className="text-xl font-extrabold tracking-tight text-white">{format(new Date(), "MMMM yyyy")}</h1>
@@ -115,7 +115,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Circular Gauge Section */}
-        <div className="flex flex-col items-center justify-center mb-6 relative z-10">
+        <div className="flex flex-col items-center justify-center mb-2 relative z-10">
           <div 
             onClick={() => {
               setPreviousTab("dashboard");
@@ -177,13 +177,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
           
           <div className="flex justify-between w-full max-w-[160px] mt-1">
             <div className="text-left">
-              <p className="text-[7px] font-bold text-white/30 uppercase tracking-widest">Budget</p>
-              <p className="text-[9px] font-bold text-white/70">{formatCurrency(budget)}</p>
+              <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Budget</p>
+              <p className="text-[11px] font-bold text-white/70">{formatCurrency(budget)}</p>
             </div>
             <div className="text-right">
-              <p className="text-[7px] font-bold text-white/30 uppercase tracking-widest">Spent</p>
+              <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Spent</p>
               <p className={cn(
-                "text-[9px] font-bold",
+                "text-[11px] font-bold",
                 totalMonthlySpend > budget ? "text-red-400" : "text-emerald-400"
               )}>
                 {formatCurrency(totalMonthlySpend)}
@@ -220,7 +220,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* Latest Transactions */}
         <section className="space-y-3">
           <div className="flex justify-between items-center px-1">
-            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Latest Transactions</h3>
+            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Latest Transactions</h3>
           </div>
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-4">
             <div className="space-y-3">
@@ -242,7 +242,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       <CategoryIcon category={t.category} size={16} />
                     </div>
                     <div>
-                      <p className="font-bold text-slate-800 text-sm leading-tight">{t.description}</p>
+                      <p className="font-bold text-slate-700 text-sm">{t.description}</p>
                       <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">{t.category} • {format(parseISO(t.date), "dd MMM")}</p>
                     </div>
                   </div>
@@ -268,7 +268,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* Top Spend Areas */}
         <section className="space-y-3">
           <div className="flex justify-between items-center px-1">
-            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Top Spend Areas</h3>
+            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Top Spend Areas</h3>
           </div>
           <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 relative overflow-hidden">
             {/* Pie Chart Visualization */}
