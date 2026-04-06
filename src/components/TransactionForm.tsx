@@ -140,9 +140,9 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       className="fixed inset-0 bg-white z-50 overflow-y-auto pb-32"
     >
       {/* Header Area */}
-      <div className="bg-[#0A2E1F] text-white p-6 pt-8 pb-10 rounded-b-[3rem] relative overflow-hidden">
+      <div className="bg-[#0A2E1F] text-white p-6 pt-5 pb-10 rounded-b-[3rem] relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-[80px]"></div>
-        <div className="flex justify-between items-center mb-6 relative z-10">
+        <div className="flex justify-between items-center mb-2 relative z-10">
           <div className="flex items-center gap-3">
             <button 
               onClick={() => {
@@ -169,7 +169,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
         </div>
 
         {editingTransaction.id !== "" && (
-          <div className="flex flex-col items-center mb-6 relative z-10">
+          <div className="flex flex-col items-center mb-2 relative z-10">
             <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-3 border border-white/10">
               <div className="text-white">
                 <CategoryIcon category={editingTransaction.category} size={28} />
@@ -192,7 +192,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               placeholder="0" 
               value={editingTransaction.amount || ""}
               onChange={(e) => setEditingTransaction({ ...editingTransaction, amount: parseFloat(e.target.value) || 0 })}
-              className="bg-transparent border-none text-5xl font-extrabold text-white focus:ring-0 w-48 text-center placeholder:text-white/20 tracking-tighter"
+              className="bg-transparent border-none text-4xl font-extrabold text-white focus:ring-0 w-48 text-center placeholder:text-white/20 tracking-tighter"
             />
           </div>
           <p className="text-white/40 text-[10px] font-bold uppercase tracking-[0.2em] mt-2">
@@ -202,8 +202,8 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       </div>
 
       {/* Form Content */}
-      <div className="px-6 -mt-6 relative z-20">
-        <div className="bg-white rounded-3xl p-5 shadow-xl border border-slate-100 space-y-6">
+      <div className="px-2 -mt-6 relative z-20">
+        <div className="bg-white rounded-3xl p-3 shadow-xl border border-slate-100">
           {/* Description Input */}
           <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
             <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm text-slate-400">
@@ -218,7 +218,8 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             />
           </div>
 
-          <div className="space-y-4">
+          {editingTransaction.id === "" && (
+          <div className="space-y-4" >
             <div className="flex justify-between items-center px-1">
               <div className="flex items-center gap-2">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Category</p>
@@ -288,10 +289,11 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               </button>
             </div>
           </div>
+          )}
 
           {/* Form Fields */}
           <div className="space-y-1 pt-2 border-t border-slate-50">
-            <div className="flex items-center justify-between py-3 px-1">
+            <div className="flex items-center justify-between py-2 px-1">
               <div className="flex items-center gap-3 w-full">
                 <Calendar size={18} className="text-slate-400" />
                 <input 
@@ -313,7 +315,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center justify-between py-3 px-1">
+            <div className="flex items-center justify-between py-2 px-1">
               <div className="flex items-center gap-3">
                 <Wallet size={18} className="text-slate-400" />
                 <span className="text-xs font-bold text-slate-700">Method</span>
@@ -342,7 +344,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center justify-between py-3 px-1">
+            <div className="flex items-center justify-between py-2 px-1">
               <div className="flex items-center gap-3">
                 <RotateCcw size={18} className="text-slate-400" />
                 <span className="text-xs font-bold text-slate-700">Is Expense</span>
@@ -373,17 +375,17 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               </div>
             )}
 
-            <div className="flex items-start gap-3 py-3 px-1 border-b border-slate-50">
+            <div className="flex items-start gap-3 py-2 px-1 border-b border-slate-50">
               <FileText size={18} className="text-slate-400 mt-0.5" />
               <textarea 
                 placeholder="Add Note (Optional)"
                 value={editingTransaction.note || ""}
                 onChange={(e) => setEditingTransaction({ ...editingTransaction, note: e.target.value })}
-                className="bg-transparent border-none p-0 text-xs font-bold text-slate-700 focus:ring-0 w-full placeholder:text-slate-300 resize-none h-16"
+                className="bg-transparent border-none p-0 text-xs font-bold text-slate-700 focus:ring-0 w-full placeholder:text-slate-300 resize-none h-10"
               ></textarea>
             </div>
 
-            <div className="flex items-center justify-between py-3 px-1">
+            <div className="flex items-center justify-between py-2 px-1">
               <div className="flex items-center gap-3 w-full">
                 <Upload size={18} className="text-slate-400" />
                 <label className="text-xs font-bold text-slate-700 cursor-pointer flex-1">
@@ -412,7 +414,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
 
         <button 
           onClick={saveTransaction}
-          className="w-full bg-[#0A2E1F] text-white py-4 rounded-2xl font-bold text-sm shadow-xl active:scale-[0.98] transition-all mt-6"
+          className="w-full bg-[#0A2E1F] text-white py-4 rounded-2xl font-bold text-sm shadow-xl active:scale-[0.98] transition-all mt-2"
         >
           {editingTransaction.id === "" ? "Add Transaction" : "Save Changes"}
         </button>
