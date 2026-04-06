@@ -1,0 +1,5 @@
+{
+  "name": "SpendWise",
+  "description": "A mobile-first expense tracker with AI-powered SMS parsing and spend analysis.",
+  "requestFramePermissions": []
+}
