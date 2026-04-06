@@ -195,6 +195,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* Glassmorphism Stats Cards */}
         <div className="grid grid-cols-2 gap-3 relative z-10">
           <div className="bg-white/5 border border-white/10 p-4 rounded-2xl backdrop-blur-md">
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingUp size={12} className="text-indigo-400" />
+              <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest">Daily Average</p>
+            </div>
+            <p className="text-base font-bold tracking-tight text-white">{formatCurrency(totalMonthlySpend / 30)}</p>
+          </div>
+
+          <div className="bg-white/5 border border-white/10 p-4 rounded-2xl backdrop-blur-md">
             <div className="flex items-center justify-between mb-2">
               <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest">Bank Balance</p>
               <button onClick={() => setShowBalance(!showBalance)} className="text-white/40 hover:text-white/60 transition-colors">
@@ -204,24 +212,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <p className="text-base font-bold tracking-tight text-white">
               {showBalance ? "₹45,230" : "₹XX,XXX"}
             </p>
-          </div>
-          
-          <div className="bg-white/5 border border-white/10 p-4 rounded-2xl backdrop-blur-md">
-            <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mb-2">Total Spend</p>
-            <p className="text-base font-bold tracking-tight text-white">{formatCurrency(totalMonthlySpend)}</p>
-          </div>
-        </div>
-
-        {/* Daily Insights */}
-        <div className="mt-3 relative z-10">
-          <div className="bg-white/5 border border-white/10 p-3 rounded-2xl flex items-center justify-center gap-3 w-full backdrop-blur-md">
-            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-white/60">
-              <TrendingUp size={14} />
-            </div>
-            <div className="flex items-center gap-3">
-              <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest">Daily Average Spend</p>
-              <p className="text-sm font-bold text-white tracking-tight">{formatCurrency(totalMonthlySpend / 30)}</p>
-            </div>
           </div>
         </div>
       </header>

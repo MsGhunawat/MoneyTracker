@@ -1,5 +1,5 @@
-import React from "react";
-import { motion } from "motion/react";
+import React, { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import { 
   ArrowLeft, 
   Trash2, 
@@ -13,12 +13,18 @@ import {
   MessageSquare, 
   FileText, 
   Upload, 
-  History 
+  History,
+  Sparkles,
+  Check,
+  Loader2
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import { GoogleGenAI, Type } from "@google/genai";
 import { cn } from "../lib/utils";
 import { Transaction } from "../types";
 import { CategoryIcon } from "./CategoryIcon";
+
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 interface TransactionFormProps {
   editingTransaction: Transaction;
@@ -49,6 +55,82 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   setShowAllCategories,
   setShowAddCategoryModal,
 }) => {
+  const [smsInput, setSmsInput] = useState("");
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [suggestedCategory, setSuggestedCategory] = useState<string | null>(null);
+
+  const handleAiParse = async () => {
+    if (!smsInput.trim()) return;
+    setIsAiLoading(true);
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Parse this bank SMS and extract transaction details. 
+        Available categories: ${categories.map(c => c.label).join(", ")}.
+        SMS: "${smsInput}"`,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              amount: { type: Type.NUMBER },
+              description: { type: Type.STRING },
+              category: { type: Type.STRING },
+              isSpend: { type: Type.BOOLEAN },
+              date: { type: Type.STRING, description: "ISO 8601 date string" }
+            },
+            required: ["amount", "description", "category", "isSpend"]
+          }
+        }
+      });
+
+      const result = JSON.parse(response.text || "{}");
+      if (result.amount) {
+        setEditingTransaction({
+          ...editingTransaction,
+          amount: result.amount,
+          description: result.description || editingTransaction.description,
+          category: result.category || editingTransaction.category,
+          isSpend: result.isSpend ?? editingTransaction.isSpend,
+          smsContent: smsInput,
+          date: result.date || editingTransaction.date
+        });
+        setSmsInput("");
+      }
+    } catch (error) {
+      console.error("AI Parse Error:", error);
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  const handleSuggestCategory = useCallback(async (text: string) => {
+    if (text.length < 3) return;
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Suggest the best category for this transaction description: "${text}". 
+        Available categories: ${categories.map(c => c.label).join(", ")}.
+        Return ONLY the category name.`,
+      });
+      const suggested = response.text?.trim();
+      if (suggested && categories.some(c => c.label === suggested)) {
+        setSuggestedCategory(suggested);
+      }
+    } catch (error) {
+      console.error("AI Suggestion Error:", error);
+    }
+  }, [categories]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (editingTransaction.description && !suggestedCategory) {
+        handleSuggestCategory(editingTransaction.description);
+      }
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [editingTransaction.description, handleSuggestCategory, suggestedCategory]);
+
   return (
     <motion.div
       key="transactionForm"
@@ -138,7 +220,31 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
 
           <div className="space-y-4">
             <div className="flex justify-between items-center px-1">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Category</p>
+              <div className="flex items-center gap-2">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Category</p>
+                <AnimatePresence>
+                  {suggestedCategory && suggestedCategory !== editingTransaction.category && (
+                    <motion.div 
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -10 }}
+                      className="flex items-center gap-1.5 bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full border border-indigo-100"
+                    >
+                      <Sparkles size={10} />
+                      <span className="text-[9px] font-bold uppercase tracking-tight">Suggest: {suggestedCategory}</span>
+                      <button 
+                        onClick={() => {
+                          setEditingTransaction({ ...editingTransaction, category: suggestedCategory });
+                          setSuggestedCategory(null);
+                        }}
+                        className="p-0.5 hover:bg-indigo-100 rounded-full transition-colors"
+                      >
+                        <Check size={10} />
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
               <button 
                 onClick={() => setShowAllCategories(!showAllCategories)}
                 className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest"
@@ -324,10 +430,26 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             </div>
             <textarea 
               placeholder="Paste your bank SMS here..."
+              value={smsInput}
+              onChange={(e) => setSmsInput(e.target.value)}
               className="w-full bg-white border border-slate-200 rounded-2xl p-3 text-xs text-slate-800 placeholder:text-slate-300 focus:ring-2 focus:ring-indigo-500 h-20 resize-none shadow-sm"
             ></textarea>
-            <button className="w-full mt-3 bg-white text-indigo-600 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest border border-indigo-100 shadow-sm active:scale-[0.98] transition-all">
-              Parse with AI
+            <button 
+              onClick={handleAiParse}
+              disabled={isAiLoading || !smsInput.trim()}
+              className="w-full mt-3 bg-white text-indigo-600 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-widest border border-indigo-100 shadow-sm active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isAiLoading ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  Parsing...
+                </>
+              ) : (
+                <>
+                  <Sparkles size={14} />
+                  Parse with AI
+                </>
+              )}
             </button>
           </div>
         )}
