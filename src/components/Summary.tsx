@@ -139,7 +139,7 @@ export const Summary: React.FC<SummaryProps> = ({
                 <ChevronLeft size={18} />
               </button>
               <div className="text-center">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                   {summaryType === "monthly" ? "Monthly Summary" : "Yearly Summary"}
                 </p>
               </div>
@@ -152,7 +152,7 @@ export const Summary: React.FC<SummaryProps> = ({
             </div>
 
             <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+              <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
                 <TrendingUp size={14} className="text-indigo-600" />
                 Spend Trend
               </h3>
@@ -213,7 +213,7 @@ export const Summary: React.FC<SummaryProps> = ({
         <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
           <div className="h-56 w-full flex items-center justify-center relative">
             <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
-              <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Total Spend</p>
+              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Total Spend</p>
               <p className="text-2xl font-extrabold text-slate-800 tracking-tight">{formatCurrency(totalSummarySpend)}</p>
             </div>
             <ResponsiveContainer width="100%" height="100%">
@@ -293,8 +293,8 @@ export const Summary: React.FC<SummaryProps> = ({
         {summaryView === "overview" && (
           <section className="space-y-3">
             <div className="flex justify-between items-center px-1">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Transactions</h3>
-              <button className="text-xs font-bold text-indigo-600 uppercase tracking-widest">See All</button>
+              <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Transactions</h3>
+              <button className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">See All</button>
             </div>
             <div className="space-y-2">
               {filteredTransactions.length > 0 ? (

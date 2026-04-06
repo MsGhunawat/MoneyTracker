@@ -87,7 +87,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="space-y-0 pb-24"
+      className="space-y-0 pb-20"
     >
       {/* Modern Professional Header */}
       <header className="bg-slate-900 text-white p-6 pb-12 rounded-b-[3.5rem] shadow-2xl relative overflow-hidden">
@@ -226,11 +226,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </header>
 
-      <main className="px-4 py-8 space-y-8 max-w-lg mx-auto">
+      <main className="px-4 pt-8 pb-4 space-y-8 max-w-lg mx-auto">
         {/* Latest Transactions */}
         <section className="space-y-3">
           <div className="flex justify-between items-center px-1">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Latest Transactions</h3>
+            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Latest Transactions</h3>
           </div>
           <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-4">
             <div className="space-y-3">
@@ -278,7 +278,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* Top Spend Areas */}
         <section className="space-y-3">
           <div className="flex justify-between items-center px-1">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Top Spend Areas</h3>
+            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Top Spend Areas</h3>
           </div>
           <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 relative overflow-hidden">
             {/* Pie Chart Visualization */}
@@ -355,7 +355,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* Cash Wallet Section */}
         <section className="space-y-3">
           <div className="flex justify-between items-center px-1">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Cash Wallet</h3>
+            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cash Wallet</h3>
           </div>
           <div 
             onClick={() => setShowCashModal(true)}
@@ -402,8 +402,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
         {/* My Accounts Section */}
         <section className="space-y-3">
           <div className="flex justify-between items-center px-1">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">My Accounts</h3>
-            <button className="text-xs font-bold text-indigo-600 uppercase tracking-widest">View All</button>
+            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">My Accounts</h3>
+            <button className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">View All</button>
           </div>
           <div className="bg-white rounded-3xl p-1 shadow-sm border border-slate-100 overflow-hidden">
             <div 
