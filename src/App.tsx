@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { AnimatePresence } from "motion/react";
+import { Layers } from "lucide-react";
 import { Transaction, Bill, Account } from "./types";
-import { format, subMonths, subYears, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
+import { format, parse, subMonths, subYears, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
 
 // Components
 import { BottomNav } from "./components/BottomNav";
@@ -23,12 +24,7 @@ import { CategoryPicker } from "./components/CategoryPicker";
 import { AddCategoryModal } from "./components/AddCategoryModal";
 
 // Constants & Utils
-import { 
-  MOCK_TRANSACTIONS, 
-  MOCK_BILLS, 
-  INITIAL_CATEGORIES, 
-  AVAILABLE_ICONS 
-} from "./constants";
+import { INITIAL_CATEGORIES, AVAILABLE_ICONS, ICON_MAP } from "./constants";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "summary" | "transactionForm" | "bills" | "settings" | "transactions" | "categoryDetail" | "budget">("dashboard");
@@ -40,8 +36,8 @@ export default function App() {
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [showBalance, setShowBalance] = useState(false);
-  const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
-  const [bills, setBills] = useState<Bill[]>(MOCK_BILLS);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [bills, setBills] = useState<Bill[]>([]);
   const [cashInHand, setCashInHand] = useState(4400); // Current month's cash
   const [showCarryForwardModal, setShowCarryForwardModal] = useState(false);
   const [pendingCarryForward, setPendingCarryForward] = useState(4500); // Mocked previous month balance
@@ -49,6 +45,71 @@ export default function App() {
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [selectedIcon, setSelectedIcon] = useState<string>("Layers");
+  const [csvImportError, setCsvImportError] = useState<string | null>(null);
+  const [importedFileName, setImportedFileName] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Persistence keys
+  const STORAGE_KEYS = {
+    transactions: 'moneytracker_transactions',
+    bills: 'moneytracker_bills',
+    categories: 'moneytracker_categories',
+    monthlyBudget: 'moneytracker_monthlyBudget',
+    cashInHand: 'moneytracker_cashInHand',
+    accounts: 'moneytracker_accounts'
+  };
+
+  // Load data from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedTransactions = localStorage.getItem(STORAGE_KEYS.transactions);
+      if (savedTransactions) setTransactions(JSON.parse(savedTransactions));
+
+      const savedBills = localStorage.getItem(STORAGE_KEYS.bills);
+      if (savedBills) setBills(JSON.parse(savedBills));
+
+      const savedCategories = localStorage.getItem(STORAGE_KEYS.categories);
+      if (savedCategories) {
+        const parsed = JSON.parse(savedCategories);
+        setCategories(parsed.map((cat: any) => ({ ...cat, icon: ICON_MAP[cat.iconName] || Layers })));
+      }
+
+      const savedMonthlyBudget = localStorage.getItem(STORAGE_KEYS.monthlyBudget);
+      if (savedMonthlyBudget) setMonthlyBudget(Number(savedMonthlyBudget));
+
+      const savedCashInHand = localStorage.getItem(STORAGE_KEYS.cashInHand);
+      if (savedCashInHand) setCashInHand(Number(savedCashInHand));
+
+      const savedAccounts = localStorage.getItem(STORAGE_KEYS.accounts);
+      if (savedAccounts) {
+        // If we want to persist accounts, but for now, accounts are hardcoded
+        // setAccounts(JSON.parse(savedAccounts));
+      }
+    } catch (error) {
+      console.error('Error loading data from localStorage:', error);
+    }
+  }, []);
+
+  // Save data to localStorage when state changes
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.transactions, JSON.stringify(transactions));
+  }, [transactions]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.bills, JSON.stringify(bills));
+  }, [bills]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.categories, JSON.stringify(categories.map(cat => ({ ...cat, icon: undefined }))));
+  }, [categories]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.monthlyBudget, monthlyBudget.toString());
+  }, [monthlyBudget]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.cashInHand, cashInHand.toString());
+  }, [cashInHand]);
 
   const [accounts] = useState<Account[]>([
     {
@@ -166,6 +227,115 @@ export default function App() {
     setShowCarryForwardModal(false);
   };
 
+  const parseCsvText = (csvText: string) => {
+    const rows: string[][] = [];
+    let currentRow: string[] = [];
+    let currentCell = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < csvText.length; i += 1) {
+      const char = csvText[i];
+      const nextChar = csvText[i + 1];
+
+      if (inQuotes) {
+        if (char === '"' && nextChar === '"') {
+          currentCell += '"';
+          i += 1;
+        } else if (char === '"') {
+          inQuotes = false;
+        } else {
+          currentCell += char;
+        }
+      } else {
+        if (char === '"') {
+          inQuotes = true;
+        } else if (char === ',') {
+          currentRow.push(currentCell);
+          currentCell = "";
+        } else if (char === '\r') {
+          continue;
+        } else if (char === '\n') {
+          currentRow.push(currentCell);
+          rows.push(currentRow);
+          currentRow = [];
+          currentCell = "";
+        } else {
+          currentCell += char;
+        }
+      }
+    }
+
+    if (currentCell !== "" || currentRow.length > 0) {
+      currentRow.push(currentCell);
+      rows.push(currentRow);
+    }
+
+    return rows;
+  };
+
+  const parseCsvDate = (dateString: string) => {
+    const parsed = parse(dateString, "yyyy/MMM/dd HH:mm:ss", new Date());
+    return isNaN(parsed.getTime()) ? new Date(dateString) : parsed;
+  };
+
+  const mapPaymentMethod = (paymentType: string): Transaction["paymentMethod"] => {
+    const normalized = (paymentType || "").toLowerCase();
+    if (normalized.includes("cash")) return "cash";
+    if (normalized.includes("upi")) return "upi";
+    return "bank";
+  };
+
+  const importTransactionsFromCsv = async (file: File) => {
+    try {
+      const text = await file.text();
+      const rows = parseCsvText(text).filter(row => row.length > 1);
+      const headers = rows[0].map(header => header.trim());
+      const importedTransactions: Transaction[] = rows.slice(1).map((values, index) => {
+        const row = Object.fromEntries(headers.map((header, i) => [header, (values[i] ?? "").trim()]));
+        const credit = Number(row["Credit"] || 0);
+        const debit = Number(row["Debit"] || 0);
+        const amount = credit > 0 ? credit : debit > 0 ? debit : 0;
+        const type = (credit > 0 ? "income" : "expense") as "income" | "expense";
+        const rawDescription = row["Merchant/Receiver/Sender"] || row["Notes"] || row["Category"] || row["SubType"] || row["Txn Type"] || "";
+        const description = rawDescription.toString().toLowerCase() === "null" ? "" : rawDescription.toString();
+        const category = row["Category"] || row["Txn Type"] || (type === "income" ? "Income" : "Miscellaneous");
+        const paymentMethod = mapPaymentMethod(row["Payment Type"] || row["Account Type"] || "");
+        const date = parseCsvDate(row["Date"] || row["date"] || "");
+
+        return {
+          id: `csv-${index}-${date.getTime()}`,
+          amount,
+          description: description || category,
+          category,
+          date: date.toISOString(),
+          type,
+          paymentMethod,
+          isSpend: type === "expense"
+        };
+      }).filter(tx => tx.amount > 0 && tx.description);
+
+      setTransactions(importedTransactions);
+      setBills([]);
+      setImportedFileName(file.name);
+      setCsvImportError(null);
+      setActiveTab("dashboard");
+    } catch (error) {
+      console.error("CSV import failed:", error);
+      setCsvImportError("Failed to import CSV. Make sure the file is valid.");
+    }
+  };
+
+  const handleCsvFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    importTransactionsFromCsv(file);
+  };
+
+  const openCsvImportDialog = () => {
+    setCsvImportError(null);
+    fileInputRef.current?.click();
+  };
+
   const handleTransactionClick = (tx: Transaction) => {
     setPreviousTab(activeTab);
     setSelectedTransaction(tx);
@@ -195,12 +365,20 @@ export default function App() {
     if (!editingTransaction) return;
     
     if (editingTransaction.id === "") {
-      // Adding new
-      const newTx = { ...editingTransaction, id: Date.now().toString() };
+      // Adding new - ensure isSpend is properly set
+      const newTx = { 
+        ...editingTransaction, 
+        id: Date.now().toString(),
+        isSpend: editingTransaction.type === "expense" ? true : false
+      };
       setTransactions(prev => [newTx, ...prev]);
     } else {
-      // Updating existing
-      setTransactions(prev => prev.map(t => t.id === editingTransaction.id ? editingTransaction : t));
+      // Updating existing - ensure isSpend is properly set
+      const updatedTx = {
+        ...editingTransaction,
+        isSpend: editingTransaction.type === "expense" ? true : false
+      };
+      setTransactions(prev => prev.map(t => t.id === editingTransaction.id ? updatedTx : t));
     }
     
     setActiveTab(previousTab as any);
@@ -365,6 +543,7 @@ export default function App() {
             handleTransactionClick={handleTransactionClick}
             openAddTransaction={openAddTransaction}
             monthlyBudget={monthlyBudget}
+            categories={categories}
           />
         )}
 
@@ -374,6 +553,7 @@ export default function App() {
             totalMonthlySpend={totalMonthlySpend}
             setActiveTab={setActiveTab}
             handleTransactionClick={handleTransactionClick}
+            categories={categories}
           />
         )}
 
@@ -394,6 +574,7 @@ export default function App() {
             setSelectedCategory={setSelectedCategory}
             handleTransactionClick={handleTransactionClick}
             openAddTransaction={openAddTransaction}
+            categories={categories}
           />
         )}
 
@@ -429,11 +610,15 @@ export default function App() {
             setSelectedCategory={setSelectedCategory}
             handleTransactionClick={handleTransactionClick}
             openAddTransaction={openAddTransaction}
+            categories={categories}
           />
         )}
 
         {activeTab === "settings" && (
-          <SettingsView />
+          <SettingsView 
+            onImportCsv={openCsvImportDialog}
+            importedFileName={importedFileName}
+          />
         )}
 
         {activeTab === "budget" && (
@@ -445,6 +630,20 @@ export default function App() {
           />
         )}
       </AnimatePresence>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv"
+        className="hidden"
+        onChange={handleCsvFileChange}
+      />
+
+      {csvImportError && (
+        <div className="mx-4 mb-4 rounded-3xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-800">
+          {csvImportError}
+        </div>
+      )}
 
       <BottomNav 
         activeTab={activeTab}

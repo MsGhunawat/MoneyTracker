@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "motion/react";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Utensils, ShoppingBag, Car, Receipt, Smartphone, Heart, TrendingUp, Home, HandCoins, Scissors, Users, Book, Layers, Banknote, Plane, CreditCard, Gift, Dog, Music, Camera, Gamepad2, Sparkles, Undo, Dumbbell } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Transaction } from "../types";
 
@@ -71,7 +71,38 @@ export const CategoryPicker: React.FC<CategoryPickerProps> = ({
                     )}
                     style={{ backgroundColor: cat.color }}
                   >
-                    <cat.icon size={24} />
+                    {(() => {
+                      const iconMap: Record<string, any> = {
+                        "Dining": Utensils,
+                        "Grocery": ShoppingBag,
+                        "Shopping": ShoppingBag,
+                        "Transport": Car,
+                        "Bills/Utilities": Receipt,
+                        "Entertainment": Smartphone,
+                        "Medical": Heart,
+                        "Investments": TrendingUp,
+                        "Rent/Mortgage": Home,
+                        "Loan": HandCoins,
+                        "Beauty/Fitness": Scissors,
+                        "Maid/Driver": Users,
+                        "Education": Book,
+                        "Miscellaneous": Layers,
+                        "Income": Banknote,
+                        "Travel": Plane,
+                        "Subscriptions": CreditCard,
+                        "Gifts": Gift,
+                        "Pets": Dog,
+                        "Books": Book,
+                        "Music": Music,
+                        "Camera": Camera,
+                        "Gaming": Gamepad2,
+                        "Salary": Banknote,
+                        "Bonus": Sparkles,
+                        "Refund": Undo,
+                      };
+                      const IconComponent = iconMap[cat.label] || Layers;
+                      return <IconComponent size={24} />;
+                    })()}
                   </div>
                   <span className={cn(
                     "text-[10px] font-bold text-center leading-tight transition-colors",

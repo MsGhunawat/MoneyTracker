@@ -10,7 +10,6 @@ import {
 import { format, parseISO } from "date-fns";
 import { cn } from "../lib/utils";
 import { Transaction } from "../types";
-import { CATEGORY_COLORS } from "../constants";
 import { formatCurrency } from "../utils";
 import { CategoryIcon } from "./CategoryIcon";
 
@@ -19,6 +18,7 @@ interface TransactionsViewProps {
   totalMonthlySpend: number;
   setActiveTab: (tab: any) => void;
   handleTransactionClick: (tx: Transaction) => void;
+  categories: any[];
 }
 
 export const TransactionsView: React.FC<TransactionsViewProps> = ({
@@ -26,6 +26,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   totalMonthlySpend,
   setActiveTab,
   handleTransactionClick,
+  categories,
 }) => {
   return (
     <motion.div
@@ -67,16 +68,21 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
             onClick={() => handleTransactionClick(t)}
             className={cn(
               "bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex items-center justify-between group hover:border-indigo-100 transition-all cursor-pointer active:scale-[0.98]",
-              !t.isSpend && "opacity-40 grayscale"
+              !t.isSpend && "bg-slate-50 border-slate-200 opacity-60"
             )}
           >
             <div className="flex items-center gap-3">
-              <div className={cn(
-                "w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm transition-transform group-hover:scale-105",
-                t.type === "income" ? "bg-emerald-500" : "bg-indigo-500"
-              )} style={{ backgroundColor: t.type === "expense" ? CATEGORY_COLORS[t.category as keyof typeof CATEGORY_COLORS] : undefined }}>
-                <CategoryIcon category={t.category} size={16} />
-              </div>
+              {(() => {
+                const cat = categories.find(c => c.label === t.category);
+                return (
+                  <div className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm transition-transform group-hover:scale-105",
+                    t.type === "income" ? "bg-emerald-500" : "bg-indigo-500"
+                  )} style={{ backgroundColor: t.type === "expense" ? (cat?.color || '#6366F1') : undefined }}>
+                    <CategoryIcon category={t.category} size={16} />
+                  </div>
+                );
+              })()}
               <div>
                 <p className="font-bold text-slate-800 text-sm leading-tight">{t.description}</p>
                 <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">{t.category} • {format(parseISO(t.date), "dd MMM")}</p>

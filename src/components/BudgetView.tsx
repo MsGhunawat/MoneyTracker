@@ -31,7 +31,7 @@ export const BudgetView: React.FC<BudgetViewProps> = ({
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="fixed inset-0 bg-white z-50 overflow-y-auto pb-10 max-w-lg mx-auto"
+      className="fixed inset-0 bg-slate-50 z-50 overflow-y-auto pb-10 max-w-lg mx-auto"
     >
       {/* Header */}
       <header className="p-4 flex items-center gap-3">
@@ -114,7 +114,7 @@ export const BudgetView: React.FC<BudgetViewProps> = ({
 
         <button 
           onClick={handleSave}
-          className="w-full bg-[#0A2E1F] text-white py-4 rounded-xl font-bold text-sm shadow-xl shadow-[#0A2E1F]/20 active:scale-[0.98] transition-all uppercase tracking-widest"
+          className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-sm shadow-xl shadow-indigo-600/20 active:scale-[0.98] transition-all uppercase tracking-widest"
         >
           Set now
         </button>
