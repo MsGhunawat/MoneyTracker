@@ -177,13 +177,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
           
           <div className="flex justify-between w-full max-w-[160px] mt-1">
             <div className="text-left">
-              <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Budget</p>
-              <p className="text-[11px] font-bold text-white/70">{formatCurrency(budget)}</p>
+              <p className="text-[12px] font-bold text-white/30 uppercase tracking-widest">Budget</p>
+              <p className="text-[13px] font-bold text-white/70">{formatCurrency(budget)}</p>
             </div>
             <div className="text-right">
-              <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Spent</p>
+              <p className="text-[12px] font-bold text-white/30 uppercase tracking-widest">Spent</p>
               <p className={cn(
-                "text-[11px] font-bold",
+                "text-[13px] font-bold",
                 totalMonthlySpend > budget ? "text-red-400" : "text-emerald-400"
               )}>
                 {formatCurrency(totalMonthlySpend)}
