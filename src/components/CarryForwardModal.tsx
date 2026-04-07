@@ -37,7 +37,7 @@ export const CarryForwardModal: React.FC<CarryForwardModalProps> = ({
             <div className="space-y-2">
               <button 
                 onClick={() => handleCarryForward(true)}
-                className="w-full bg-[#0A2E1F] text-white py-3.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-emerald-900/20 active:scale-95 transition-all"
+                className="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
               >
                 Carry Forward to {format(new Date(), "MMMM")}
               </button>

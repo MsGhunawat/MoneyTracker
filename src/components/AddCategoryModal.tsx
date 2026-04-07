@@ -56,7 +56,7 @@ export const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
                       onClick={() => setSelectedIcon(item.name)}
                       className={cn(
                         "w-11 h-11 rounded-xl flex items-center justify-center transition-all",
-                        selectedIcon === item.name ? "bg-[#0A2E1F] text-white shadow-lg shadow-emerald-900/20" : "bg-slate-50 text-slate-400"
+                        selectedIcon === item.name ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20" : "bg-slate-50 text-slate-400"
                       )}
                     >
                       <item.icon size={18} />
@@ -75,7 +75,7 @@ export const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
               </button>
               <button 
                 onClick={handleAddCategory}
-                className="flex-1 bg-[#0A2E1F] text-white py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-emerald-900/20 active:scale-95 transition-all"
+                className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
               >
                 Add
               </button>

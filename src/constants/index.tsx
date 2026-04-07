@@ -130,24 +130,24 @@ export const CATEGORY_ICONS: Record<string, React.ElementType> = {
 };
 
 export const INITIAL_CATEGORIES = [
-  { id: 'dining', label: 'Dining', icon: Utensils, color: CATEGORY_COLORS["Dining"] },
-  { id: 'grocery', label: 'Grocery', icon: ShoppingBag, color: CATEGORY_COLORS["Grocery"] },
-  { id: 'shopping', label: 'Shopping', icon: ShoppingBag, color: CATEGORY_COLORS["Shopping"] },
-  { id: 'transport', label: 'Transport', icon: Car, color: CATEGORY_COLORS["Transport"] },
-  { id: 'bills', label: 'Bills/Utilities', icon: Receipt, color: CATEGORY_COLORS["Bills/Utilities"] },
-  { id: 'entertainment', label: 'Entertainment', icon: Smartphone, color: CATEGORY_COLORS["Entertainment"] },
-  { id: 'medical', label: 'Medical', icon: Heart, color: CATEGORY_COLORS["Medical"] },
-  { id: 'investments', label: 'Investments', icon: TrendingUp, color: CATEGORY_COLORS["Investments"] },
-  { id: 'rent', label: 'Rent/Mortgage', icon: Home, color: CATEGORY_COLORS["Rent/Mortgage"] },
-  { id: 'loan', label: 'Loan', icon: HandCoins, color: CATEGORY_COLORS["Loan"] },
-  { id: 'beauty', label: 'Beauty/Fitness', icon: Scissors, color: CATEGORY_COLORS["Beauty/Fitness"] },
-  { id: 'maid', label: 'Maid/Driver', icon: Users, color: CATEGORY_COLORS["Maid/Driver"] },
-  { id: 'education', label: 'Education', icon: Book, color: CATEGORY_COLORS["Education"] },
-  { id: 'travel', label: 'Travel', icon: Plane, color: CATEGORY_COLORS["Travel"] },
-  { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard, color: CATEGORY_COLORS["Subscriptions"] },
-  { id: 'gifts', label: 'Gifts', icon: Gift, color: CATEGORY_COLORS["Gifts"] },
-  { id: 'pets', label: 'Pets', icon: Dog, color: CATEGORY_COLORS["Pets"] },
-  { id: 'misc', label: 'Miscellaneous', icon: Layers, color: CATEGORY_COLORS["Miscellaneous"] },
+  { id: 'dining', label: 'Dining', icon: Utensils, iconName: 'Utensils', color: CATEGORY_COLORS["Dining"] },
+  { id: 'grocery', label: 'Grocery', icon: ShoppingBag, iconName: 'ShoppingBag', color: CATEGORY_COLORS["Grocery"] },
+  { id: 'shopping', label: 'Shopping', icon: ShoppingBag, iconName: 'ShoppingBag', color: CATEGORY_COLORS["Shopping"] },
+  { id: 'transport', label: 'Transport', icon: Car, iconName: 'Car', color: CATEGORY_COLORS["Transport"] },
+  { id: 'bills', label: 'Bills/Utilities', icon: Receipt, iconName: 'Receipt', color: CATEGORY_COLORS["Bills/Utilities"] },
+  { id: 'entertainment', label: 'Entertainment', icon: Smartphone, iconName: 'Smartphone', color: CATEGORY_COLORS["Entertainment"] },
+  { id: 'medical', label: 'Medical', icon: Heart, iconName: 'Heart', color: CATEGORY_COLORS["Medical"] },
+  { id: 'investments', label: 'Investments', icon: TrendingUp, iconName: 'TrendingUp', color: CATEGORY_COLORS["Investments"] },
+  { id: 'rent', label: 'Rent/Mortgage', icon: Home, iconName: 'Home', color: CATEGORY_COLORS["Rent/Mortgage"] },
+  { id: 'loan', label: 'Loan', icon: HandCoins, iconName: 'HandCoins', color: CATEGORY_COLORS["Loan"] },
+  { id: 'beauty', label: 'Beauty/Fitness', icon: Scissors, iconName: 'Scissors', color: CATEGORY_COLORS["Beauty/Fitness"] },
+  { id: 'maid', label: 'Maid/Driver', icon: Users, iconName: 'Users', color: CATEGORY_COLORS["Maid/Driver"] },
+  { id: 'education', label: 'Education', icon: Book, iconName: 'Book', color: CATEGORY_COLORS["Education"] },
+  { id: 'travel', label: 'Travel', icon: Plane, iconName: 'Plane', color: CATEGORY_COLORS["Travel"] },
+  { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard, iconName: 'CreditCard', color: CATEGORY_COLORS["Subscriptions"] },
+  { id: 'gifts', label: 'Gifts', icon: Gift, iconName: 'Gift', color: CATEGORY_COLORS["Gifts"] },
+  { id: 'pets', label: 'Pets', icon: Dog, iconName: 'Dog', color: CATEGORY_COLORS["Pets"] },
+  { id: 'misc', label: 'Miscellaneous', icon: Layers, iconName: 'Layers', color: CATEGORY_COLORS["Miscellaneous"] },
 ];
 
 export const AVAILABLE_ICONS = [
@@ -160,3 +160,8 @@ export const AVAILABLE_ICONS = [
   { name: "Camera", icon: Camera },
   { name: "Game", icon: Gamepad2 },
 ];
+
+export const ICON_MAP: Record<string, React.ElementType> = {
+  ...CATEGORY_ICONS,
+  ...Object.fromEntries(AVAILABLE_ICONS.map(i => [i.name, i.icon]))
+};

@@ -13,8 +13,7 @@ import {
 } from "recharts";
 import { cn } from "../lib/utils";
 import { Transaction } from "../types";
-import { CATEGORY_COLORS } from "../constants";
-import { formatCurrency } from "../utils";
+import { formatCurrency, formatPaymentMethod } from "../utils";
 import { CategoryIcon } from "./CategoryIcon";
 
 interface CategoryDetailViewProps {
@@ -27,6 +26,7 @@ interface CategoryDetailViewProps {
   setSelectedCategory: (category: string | null) => void;
   handleTransactionClick: (tx: Transaction) => void;
   openAddTransaction: (category?: string) => void;
+  categories: any[];
 }
 
 export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
@@ -39,6 +39,7 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
   setSelectedCategory,
   handleTransactionClick,
   openAddTransaction,
+  categories,
 }) => {
   return (
     <motion.div
@@ -48,8 +49,8 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
       exit={{ opacity: 0, x: -20 }}
       className="fixed inset-0 bg-slate-50 z-50 overflow-y-auto pb-32 max-w-lg mx-auto"
     >
-      {/* Modern Dark Green Header */}
-      <div className="bg-[#0A2E1F] text-white p-5 pt-6 pb-10 rounded-b-3xl shadow-xl relative overflow-hidden">
+      {/* Modern Dark Header */}
+      <div className="bg-slate-900 text-white p-5 pt-6 pb-10 rounded-b-3xl shadow-xl relative overflow-hidden">
         {/* Background Decorative Elements */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-[80px]"></div>
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-emerald-400/5 rounded-full -ml-24 -mb-24 blur-[60px]"></div>
@@ -155,20 +156,25 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
                 className={cn(
                   "p-4 flex items-center justify-between group hover:bg-slate-50 transition-all cursor-pointer active:scale-[0.98]",
                   idx !== categoryTransactions.length - 1 && "border-b border-slate-50",
-                  !tx.isSpend && "opacity-40 grayscale"
+                  !tx.isSpend && "bg-slate-50 opacity-60"
                 )}
               >
                 <div className="flex items-center gap-3">
-                  <div 
-                    className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm"
-                    style={{ backgroundColor: CATEGORY_COLORS[tx.category as keyof typeof CATEGORY_COLORS] || "#94A3B8" }}
-                  >
-                    <CategoryIcon category={tx.category} size={16} />
-                  </div>
+                  {(() => {
+                    const cat = categories.find(c => c.label === tx.category);
+                    return (
+                      <div 
+                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm"
+                        style={{ backgroundColor: cat?.color || "#94A3B8" }}
+                      >
+                        <CategoryIcon category={tx.category} size={16} />
+                      </div>
+                    );
+                  })()}
                   <div>
                     <p className="font-bold text-slate-800 text-sm leading-tight">{tx.description}</p>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{tx.paymentMethod}</p>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{formatPaymentMethod(tx.paymentMethod)}</p>
                       <span className="w-1 h-1 bg-slate-200 rounded-full"></span>
                       <p className="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">{format(parseISO(tx.date), "dd MMM yyyy")}</p>
                     </div>
@@ -190,7 +196,7 @@ export const CategoryDetailView: React.FC<CategoryDetailViewProps> = ({
       {/* Floating Action Button */}
       <button 
         onClick={() => openAddTransaction(selectedCategory || undefined)}
-        className="fixed bottom-24 right-6 w-14 h-14 bg-[#0A2E1F] text-white rounded-2xl flex items-center justify-center shadow-2xl active:scale-90 transition-transform z-50 border-4 border-white"
+        className="fixed bottom-24 right-6 w-14 h-14 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-2xl active:scale-90 transition-transform z-50 border-4 border-white"
       >
         <Plus size={24} />
       </button>

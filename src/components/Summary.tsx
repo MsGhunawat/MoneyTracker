@@ -22,8 +22,7 @@ import {
 } from "recharts";
 import { cn } from "../lib/utils";
 import { Transaction } from "../types";
-import { CATEGORY_COLORS } from "../constants";
-import { formatCurrency } from "../utils";
+import { formatCurrency, formatPaymentMethod } from "../utils";
 import { CategoryIcon } from "./CategoryIcon";
 
 interface SummaryProps {
@@ -42,6 +41,7 @@ interface SummaryProps {
   setSelectedCategory: (category: string | null) => void;
   handleTransactionClick: (tx: Transaction) => void;
   openAddTransaction: () => void;
+  categories: any[];
 }
 
 export const Summary: React.FC<SummaryProps> = ({
@@ -60,6 +60,7 @@ export const Summary: React.FC<SummaryProps> = ({
   setSelectedCategory,
   handleTransactionClick,
   openAddTransaction,
+  categories,
 }) => {
   return (
     <motion.div
@@ -228,9 +229,10 @@ export const Summary: React.FC<SummaryProps> = ({
                   dataKey="amount"
                   stroke="none"
                 >
-                  {summarySpendAreas.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.category as keyof typeof CATEGORY_COLORS] || '#E2E8F0'} />
-                  ))}
+                  {summarySpendAreas.map((entry, index) => {
+                    const cat = categories.find(c => c.label === entry.category);
+                    return <Cell key={`cell-${index}`} fill={cat?.color || '#E2E8F0'} />;
+                  })}
                 </Pie>
               </RePieChart>
             </ResponsiveContainer>
@@ -261,7 +263,10 @@ export const Summary: React.FC<SummaryProps> = ({
                     <motion.circle 
                       cx="20" cy="20" r="18" 
                       fill="none" 
-                      stroke={CATEGORY_COLORS[area.category as keyof typeof CATEGORY_COLORS] || '#E2E8F0'} 
+                      stroke={(() => {
+                        const cat = categories.find(c => c.label === area.category);
+                        return cat?.color || '#E2E8F0';
+                      })()} 
                       strokeWidth="3" 
                       strokeDasharray={2 * Math.PI * 18}
                       initial={{ strokeDashoffset: 2 * Math.PI * 18 }}
@@ -270,7 +275,10 @@ export const Summary: React.FC<SummaryProps> = ({
                     />
                   </svg>
                   <div className="relative z-10 text-slate-600">
-                    <CategoryIcon category={area.category} size={14} />
+                    {(() => {
+                      const cat = categories.find(c => c.label === area.category);
+                      return <CategoryIcon category={area.category} size={14} icon={cat?.icon} />;
+                    })()}
                   </div>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -304,16 +312,21 @@ export const Summary: React.FC<SummaryProps> = ({
                     onClick={() => handleTransactionClick(tx)}
                     className={cn(
                       "bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex items-center justify-between group hover:border-indigo-100 transition-all cursor-pointer active:scale-[0.98]",
-                      !tx.isSpend && "opacity-40 grayscale"
+                      !tx.isSpend && "bg-slate-50 border-slate-200 opacity-60"
                     )}
                   >
                     <div className="flex items-center gap-3">
-                      <div 
-                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform"
-                        style={{ backgroundColor: CATEGORY_COLORS[tx.category as keyof typeof CATEGORY_COLORS] || "#94A3B8" }}
-                      >
-                        <CategoryIcon category={tx.category} size={16} />
-                      </div>
+                      {(() => {
+                        const cat = categories.find(c => c.label === tx.category);
+                        return (
+                          <div 
+                            className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform"
+                            style={{ backgroundColor: cat?.color || "#94A3B8" }}
+                          >
+                            <CategoryIcon category={tx.category} size={16} />
+                          </div>
+                        );
+                      })()}
                       <div>
                         <p className="font-bold text-slate-800 text-sm leading-tight">{tx.description}</p>
                         <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">
@@ -328,7 +341,7 @@ export const Summary: React.FC<SummaryProps> = ({
                       )}>
                         {tx.type === "income" ? "+" : "-"} {formatCurrency(tx.amount)}
                       </p>
-                      <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{tx.paymentMethod}</p>
+                      <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{formatPaymentMethod(tx.paymentMethod)}</p>
                     </div>
                   </div>
                 ))

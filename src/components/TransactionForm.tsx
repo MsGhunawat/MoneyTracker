@@ -22,6 +22,7 @@ import { format, parseISO } from "date-fns";
 import { GoogleGenAI, Type } from "@google/genai";
 import { cn } from "../lib/utils";
 import { Transaction } from "../types";
+import { formatPaymentMethod } from "../utils";
 import { CategoryIcon } from "./CategoryIcon";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
@@ -137,10 +138,10 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="fixed inset-0 bg-white z-50 overflow-y-auto pb-32"
+      className="fixed inset-0 bg-slate-50 z-50 overflow-y-auto pb-32"
     >
       {/* Header Area */}
-      <div className="bg-[#0A2E1F] text-white p-6 pt-5 pb-10 rounded-b-[3rem] relative overflow-hidden">
+      <div className="bg-slate-900 text-white p-6 pt-5 pb-10 rounded-b-[3rem] relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -mr-32 -mt-32 blur-[80px]"></div>
         <div className="flex justify-between items-center mb-2 relative z-10">
           <div className="flex items-center gap-3">
@@ -172,7 +173,10 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
           <div className="flex flex-col items-center mb-2 relative z-10">
             <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg mb-3 border border-white/10">
               <div className="text-white">
-                <CategoryIcon category={editingTransaction.category} size={28} />
+                {(() => {
+                  const cat = categories.find(c => c.label === editingTransaction.category);
+                  return <CategoryIcon category={editingTransaction.category} size={28} />;
+                })()}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -196,7 +200,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             />
           </div>
           <p className="text-white/40 text-[10px] font-bold uppercase tracking-[0.2em] mt-2">
-            {editingTransaction.paymentMethod} • {format(parseISO(editingTransaction.date), "dd MMM yyyy")}
+            {formatPaymentMethod(editingTransaction.paymentMethod)} • {format(parseISO(editingTransaction.date), "dd MMM yyyy")}
           </p>
         </div>
       </div>
@@ -268,7 +272,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                     )}
                     style={{ backgroundColor: cat.color }}
                   >
-                    <cat.icon size={20} />
+                    <CategoryIcon category={cat.label} size={20} />
                   </div>
                   <span className={cn(
                     "text-[9px] font-bold text-center leading-tight transition-colors truncate w-full px-1",
@@ -339,7 +343,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                     editingTransaction.paymentMethod === "upi" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400"
                   )}
                 >
-                  UPI
+                  Online
                 </button>
               </div>
             </div>
@@ -414,7 +418,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
 
         <button 
           onClick={saveTransaction}
-          className="w-full bg-[#0A2E1F] text-white py-4 rounded-2xl font-bold text-sm shadow-xl active:scale-[0.98] transition-all mt-2"
+          className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold text-sm shadow-xl active:scale-[0.98] transition-all mt-2"
         >
           {editingTransaction.id === "" ? "Add Transaction" : "Save Changes"}
         </button>

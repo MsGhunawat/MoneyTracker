@@ -11,6 +11,11 @@ import {
   ChevronRight 
 } from "lucide-react";
 
+interface SettingsViewProps {
+  onImportCsv: () => void;
+  importedFileName: string | null;
+}
+
 interface SettingsItemProps {
   icon: React.ReactNode;
   label: string;
@@ -36,7 +41,7 @@ const SettingsItem: React.FC<SettingsItemProps> = ({ icon, label, value, onClick
   </button>
 );
 
-export const SettingsView: React.FC = () => {
+export const SettingsView: React.FC<SettingsViewProps> = ({ onImportCsv, importedFileName }) => {
   return (
     <motion.div
       key="settings"
@@ -70,6 +75,20 @@ export const SettingsView: React.FC = () => {
           <SettingsItem icon={<Bell size={18} />} label="Notifications" value="Enabled" />
           <SettingsItem icon={<Smartphone size={18} />} label="SMS Sync" value="Automatic" />
           <SettingsItem icon={<History size={18} />} label="Data Backup" value="Cloud Sync" />
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100">
+        <div className="p-3 border-b border-slate-50">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3">Data Import</p>
+        </div>
+        <div className="divide-y divide-slate-50">
+          <SettingsItem 
+            icon={<FileText size={18} />} 
+            label="Import CSV" 
+            value={importedFileName ? "" : "Select File"} 
+            onClick={onImportCsv} 
+          />
         </div>
       </div>
 

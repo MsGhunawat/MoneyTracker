@@ -14,7 +14,7 @@ import {
   Wallet,
   Plus
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, endOfMonth, differenceInDays, startOfMonth, eachDayOfInterval } from "date-fns";
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -27,7 +27,6 @@ import {
 } from "recharts";
 import { cn } from "../lib/utils";
 import { Transaction, Account } from "../types";
-import { CATEGORY_COLORS } from "../constants";
 import { formatCurrency } from "../utils";
 import { CategoryIcon } from "./CategoryIcon";
 
@@ -46,6 +45,7 @@ interface DashboardProps {
   openAddTransaction: () => void;
   monthlyBudget: number;
   cashInHand: number;
+  categories: any[];
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -63,22 +63,34 @@ export const Dashboard: React.FC<DashboardProps> = ({
   openAddTransaction,
   monthlyBudget,
   cashInHand,
+  categories,
 }) => {
   const budget = monthlyBudget || 35000;
+  const daysLeft = differenceInDays(endOfMonth(new Date()), new Date());
+  const daysPassed = new Date().getDate(); // Current day of month (1-31)
   const [showAccountModal, setShowAccountModal] = React.useState(false);
   const [showCashModal, setShowCashModal] = React.useState(false);
   const [accountModalType, setAccountModalType] = React.useState<"bank" | "credit_card">("bank");
   
-  // Mock trend data for sparkline
-  const sparklineData = [
-    { day: 1, amount: 1200 },
-    { day: 5, amount: 4500 },
-    { day: 10, amount: 8900 },
-    { day: 15, amount: 15600 },
-    { day: 20, amount: 22400 },
-    { day: 25, amount: 28900 },
-    { day: 30, amount: totalMonthlySpend },
-  ];
+  // Dynamic trend data for sparkline based on actual transactions
+  const currentMonth = new Date();
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  const daysInMonthCount = differenceInDays(monthEnd, monthStart) + 1;
+  const sparklineData = daysInMonth.map((day, index) => {
+    const cumulativeSpend = transactions
+      .filter(tx => tx.type === 'expense' && tx.isSpend !== false && parseISO(tx.date).getTime() <= day.getTime())
+      .reduce((sum, tx) => sum + tx.amount, 0);
+    return {
+      day: index + 1,
+      amount: cumulativeSpend
+    };
+  });
+
+  const bankBalance = accounts
+    .filter(acc => acc.type === 'bank')
+    .reduce((sum, acc) => sum + acc.amount, 0);
 
   const arcLength = 393.75; 
 
@@ -152,7 +164,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 strokeLinecap="round"
                 strokeDasharray={arcLength}
                 initial={{ strokeDashoffset: arcLength }}
-                animate={{ strokeDashoffset: arcLength * (1 - Math.min(totalMonthlySpend / budget, 1)) }}
+                animate={{ strokeDashoffset: -arcLength * (1 - Math.min(totalMonthlySpend / budget, 1)) }}
                 transition={{ duration: 1.5, ease: "easeOut" }}
               />
             </svg>
@@ -170,20 +182,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   : formatCurrency(budget - totalMonthlySpend)}
               </p>
               <div className="mt-1 px-2 py-0.5 bg-white/10 rounded-full">
-                <p className="text-[7px] font-bold text-white/70">24 days left</p>
+                <p className="text-[7px] font-bold text-white/70">{daysLeft} days left</p>
               </div>
             </div>
           </div>
           
           <div className="flex justify-between w-full max-w-[160px] mt-1">
             <div className="text-left">
-              <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Budget</p>
-              <p className="text-[11px] font-bold text-white/70">{formatCurrency(budget)}</p>
+              <p className="text-[12px] font-bold text-white/30 uppercase tracking-widest">Budget</p>
+              <p className="text-[13px] font-bold text-white/70">{formatCurrency(budget)}</p>
             </div>
             <div className="text-right">
-              <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Spent</p>
+              <p className="text-[12px] font-bold text-white/30 uppercase tracking-widest">Spent</p>
               <p className={cn(
-                "text-[11px] font-bold",
+                "text-[13px] font-bold",
                 totalMonthlySpend > budget ? "text-red-400" : "text-emerald-400"
               )}>
                 {formatCurrency(totalMonthlySpend)}
@@ -199,7 +211,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <TrendingUp size={12} className="text-indigo-400" />
               <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest">Daily Average</p>
             </div>
-            <p className="text-base font-bold tracking-tight text-white">{formatCurrency(totalMonthlySpend / 30)}</p>
+            <p className="text-base font-bold tracking-tight text-white">{formatCurrency(daysPassed > 0 ? totalMonthlySpend / daysPassed : 0)}</p>
           </div>
 
           <div className="bg-white/5 border border-white/10 p-4 rounded-2xl backdrop-blur-md">
@@ -210,7 +222,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </button>
             </div>
             <p className="text-base font-bold tracking-tight text-white">
-              {showBalance ? "₹45,230" : "₹XX,XXX"}
+              {showBalance ? formatCurrency(bankBalance) : "₹XX,XXX"}
             </p>
           </div>
         </div>
@@ -234,13 +246,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   className={cn(
                     "flex items-center justify-between group cursor-pointer active:scale-[0.98] transition-all",
                     idx !== arr.length - 1 && "border-b border-slate-50 pb-3",
-                    !t.isSpend && "opacity-40 grayscale"
+                    !t.isSpend && "opacity-60"
                   )}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm" style={{ backgroundColor: t.type === "expense" ? CATEGORY_COLORS[t.category as keyof typeof CATEGORY_COLORS] : "#10B981" }}>
-                      <CategoryIcon category={t.category} size={16} />
-                    </div>
+                    {(() => {
+                      const cat = categories.find(c => c.label === t.category);
+                      return (
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm" style={{ backgroundColor: t.type === "expense" ? (cat?.color || '#6366F1') : "#10B981" }}>
+                          <CategoryIcon category={t.category} size={16} />
+                        </div>
+                      );
+                    })()}
                     <div>
                       <p className="font-bold text-slate-700 text-sm">{t.description}</p>
                       <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">{t.category} • {format(parseISO(t.date), "dd MMM")}</p>
@@ -285,9 +302,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     dataKey="amount"
                     stroke="none"
                   >
-                    {topSpendAreas.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.category as keyof typeof CATEGORY_COLORS] || '#E2E8F0'} />
-                    ))}
+                    {topSpendAreas.map((entry, index) => {
+                      const cat = categories.find(c => c.label === entry.category);
+                      return <Cell key={`cell-${index}`} fill={cat?.color || '#E2E8F0'} />;
+                    })}
                   </Pie>
                 </PieChart>
               </ResponsiveContainer>
@@ -299,35 +317,38 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
             {/* Spend Areas List - Top 3 */}
             <div className="grid grid-cols-1 gap-4 mb-6">
-              {topSpendAreas.slice(0, 3).map((area) => (
-                <div 
-                  key={area.category} 
-                  className="flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform"
-                  onClick={() => {
-                    setPreviousTab("dashboard");
-                    setSelectedCategory(area.category);
-                    setActiveTab("categoryDetail");
-                  }}
-                >
-                  <div className="w-8 h-8 rounded-full border flex items-center justify-center shrink-0" style={{ borderColor: CATEGORY_COLORS[area.category as keyof typeof CATEGORY_COLORS] + '20', color: CATEGORY_COLORS[area.category as keyof typeof CATEGORY_COLORS] }}>
-                     <CategoryIcon category={area.category} size={14} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-center mb-1">
-                      <h4 className="font-bold text-slate-700 text-sm">{area.category}</h4>
-                      <p className="font-bold text-slate-800 text-sm">{formatCurrency(area.amount)}</p>
+              {topSpendAreas.slice(0, 3).map((area) => {
+                const cat = categories.find(c => c.label === area.category);
+                return (
+                  <div 
+                    key={area.category} 
+                    className="flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform"
+                    onClick={() => {
+                      setPreviousTab("dashboard");
+                      setSelectedCategory(area.category);
+                      setActiveTab("categoryDetail");
+                    }}
+                  >
+                    <div className="w-8 h-8 rounded-full border flex items-center justify-center shrink-0" style={{ borderColor: (cat?.color || '#6366F1') + '20', color: cat?.color || '#6366F1' }}>
+                       <CategoryIcon category={area.category} size={14} icon={cat?.icon} />
                     </div>
-                    <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
-                      <motion.div 
-                        initial={{ width: 0 }}
-                        animate={{ width: `${area.percentage}%` }}
-                        className="h-full rounded-full"
-                        style={{ backgroundColor: CATEGORY_COLORS[area.category as keyof typeof CATEGORY_COLORS] }}
-                      />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center mb-1">
+                        <h4 className="font-bold text-slate-700 text-sm">{area.category}</h4>
+                        <p className="font-bold text-slate-800 text-sm">{formatCurrency(area.amount)}</p>
+                      </div>
+                      <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${area.percentage}%` }}
+                          className="h-full rounded-full"
+                          style={{ backgroundColor: cat?.color || '#6366F1' }}
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <button 
@@ -512,12 +533,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       )}
                     >
                       <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md",
-                          t.type === "income" ? "bg-green-500" : "bg-indigo-500"
-                        )} style={{ backgroundColor: t.type === "expense" ? CATEGORY_COLORS[t.category as keyof typeof CATEGORY_COLORS] : undefined }}>
-                          <CategoryIcon category={t.category} size={18} />
-                        </div>
+                        {(() => {
+                          const cat = categories.find(c => c.label === t.category);
+                          return (
+                            <div className={cn(
+                              "w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md",
+                              t.type === "income" ? "bg-green-500" : "bg-indigo-500"
+                            )} style={{ backgroundColor: t.type === "expense" ? (cat?.color || '#6366F1') : undefined }}>
+                              <CategoryIcon category={t.category} size={18} icon={cat?.icon} />
+                            </div>
+                          );
+                        })()}
                         <div>
                           <p className="font-bold text-slate-800 text-sm">{t.description}</p>
                           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{t.category} • {format(parseISO(t.date), "dd MMM")}</p>
