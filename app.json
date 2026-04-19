@@ -18,11 +18,20 @@
         "READ_SMS"
       ]
     },
-    "web": {},
-    "extra": {
-      "eas": {
-        "projectId": "3d183167-1ed2-49f2-8982-1f0c72770c4d"
-      }
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0",
+            "kotlinVersion": "1.9.24"
+          }
+        }
+      ]
+    ],
+    "web": {
     }
   }
 }
