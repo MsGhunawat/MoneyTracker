@@ -1,0 +1,26 @@
+{
+  "build": {
+    "preview": {
+      "android": {
+        "buildType": "apk",
+        "image": "latest"
+      },
+      "node": "20.10.0",
+      "env": {
+        "JAVA_VERSION": "17"
+      }
+    },
+    "production": {
+      "android": {
+        "image": "latest"
+      },
+      "node": "20.10.0",
+      "env": {
+        "JAVA_VERSION": "17"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
