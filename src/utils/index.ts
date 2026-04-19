@@ -6,15 +6,6 @@ export const formatCurrency = (amount: number) => {
   }).format(amount).replace('INR', '₹');
 };
 
-export const formatPaymentMethod = (paymentMethod: string) => {
-  switch (paymentMethod) {
-    case "cash":
-      return "Cash";
-    case "bank":
-      return "Bank";
-    case "upi":
-      return "Online";
-    default:
-      return paymentMethod;
-  }
+export const formatPaymentMethod = (method: string) => {
+  return method.charAt(0).toUpperCase() + method.slice(1);
 };

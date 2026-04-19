@@ -1,14 +1,15 @@
 import React from "react";
-import { motion } from "motion/react";
+import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { MotiView } from "moti";
 import { 
   ArrowLeft, 
   Search, 
   Filter, 
   Download, 
   Layers 
-} from "lucide-react";
+} from "lucide-react-native";
 import { format, parseISO } from "date-fns";
-import { cn } from "../lib/utils";
+import tw from "twrnc";
 import { Transaction } from "../types";
 import { formatCurrency } from "../utils";
 import { CategoryIcon } from "./CategoryIcon";
@@ -29,76 +30,63 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   categories,
 }) => {
   return (
-    <motion.div
-      key="transactions"
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      className="space-y-5 max-w-lg mx-auto"
-    >
-      {/* Transactions Header */}
-      <header className="flex items-center justify-between px-2">
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setActiveTab("dashboard")}
-            className="p-2 bg-white rounded-xl shadow-sm border border-slate-100 text-slate-600 active:scale-90 transition-transform"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <h2 className="text-lg font-bold text-slate-800 tracking-tight">Transactions</h2>
-        </div>
-        <div className="flex gap-2">
-          <button className="p-2 bg-white rounded-xl shadow-sm border border-slate-100 text-slate-400 active:scale-90 transition-transform">
-            <Search size={18} />
-          </button>
-          <button className="p-2 bg-white rounded-xl shadow-sm border border-slate-100 text-slate-400 active:scale-90 transition-transform">
-            <Filter size={18} />
-          </button>
-          <button className="p-2 bg-white rounded-xl shadow-sm border border-slate-100 text-slate-400 active:scale-90 transition-transform">
-            <Download size={18} />
-          </button>
-        </div>
-      </header>
+    <View style={tw`flex-1 bg-slate-50`}>
+      <ScrollView contentContainerStyle={tw`px-4 py-6 pb-32`}>
+        {/* Transactions Header */}
+        <View style={tw`flex-row items-center justify-between mb-6`}>
+          <View style={tw`flex-row items-center gap-3`}>
+            <TouchableOpacity 
+              onPress={() => setActiveTab("dashboard")}
+              style={tw`p-2 bg-white rounded-xl shadow-sm border border-slate-100`}
+            >
+              <ArrowLeft size={18} color="#475569" />
+            </TouchableOpacity>
+            <Text style={tw`text-lg font-bold text-slate-800 tracking-tight`}>Transactions</Text>
+          </View>
+          <View style={tw`flex-row gap-2`}>
+            <TouchableOpacity style={tw`p-2 bg-white rounded-xl shadow-sm border border-slate-100`}>
+              <Search size={18} color="#94A3B8" />
+            </TouchableOpacity>
+            <TouchableOpacity style={tw`p-2 bg-white rounded-xl shadow-sm border border-slate-100`}>
+              <Filter size={18} color="#94A3B8" />
+            </TouchableOpacity>
+            <TouchableOpacity style={tw`p-2 bg-white rounded-xl shadow-sm border border-slate-100`}>
+              <Download size={18} color="#94A3B8" />
+            </TouchableOpacity>
+          </View>
+        </View>
 
-      {/* Transactions List */}
-      <div className="space-y-3 pb-24">
-        {transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((t) => (
-          <div 
-            key={t.id} 
-            onClick={() => handleTransactionClick(t)}
-            className={cn(
-              "bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex items-center justify-between group hover:border-indigo-100 transition-all cursor-pointer active:scale-[0.98]",
-              !t.isSpend && "bg-slate-50 border-slate-200 opacity-60"
-            )}
-          >
-            <div className="flex items-center gap-3">
-              {(() => {
-                const cat = categories.find(c => c.label === t.category);
-                return (
-                  <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm transition-transform group-hover:scale-105",
-                    t.type === "income" ? "bg-emerald-500" : "bg-indigo-500"
-                  )} style={{ backgroundColor: t.type === "expense" ? (cat?.color || '#6366F1') : undefined }}>
-                    <CategoryIcon category={t.category} size={16} />
-                  </div>
-                );
-              })()}
-              <div>
-                <p className="font-bold text-slate-800 text-sm leading-tight">{t.description}</p>
-                <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">{t.category} • {format(parseISO(t.date), "dd MMM")}</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <p className={cn(
-                "font-bold text-sm",
-                t.type === "income" ? "text-emerald-600" : "text-slate-800"
-              )}>
-                {t.type === "income" ? "+" : "-"}{formatCurrency(t.amount)}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </motion.div>
+        {/* Transactions List */}
+        <View style={tw`gap-3`}>
+          {transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((t) => (
+            <TouchableOpacity 
+              key={t.id} 
+              onPress={() => handleTransactionClick(t)}
+              style={tw`bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex-row items-center justify-between ${!t.isSpend ? "opacity-40" : ""}`}
+            >
+              <View style={tw`flex-row items-center gap-3`}>
+                <View 
+                  style={[
+                    tw`w-10 h-10 rounded-xl items-center justify-center shadow-sm`,
+                    { backgroundColor: t.type === "income" ? "#10B981" : (categories.find(c => c.label === t.category)?.color || "#6366F1") }
+                  ]}
+                >
+                  <CategoryIcon category={t.category} size={16} color="white" />
+                </View>
+                <View>
+                  <Text style={tw`font-bold text-slate-800 text-sm`}>{t.description}</Text>
+                  <Text style={tw`text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5`}>{t.category} • {format(parseISO(t.date), "dd MMM")}</Text>
+                </View>
+              </View>
+              <View style={tw`items-end`}>
+                <Text style={tw`font-bold text-sm ${t.type === "income" ? "text-emerald-600" : "text-slate-800"}`}>
+                  {t.type === "income" ? "+" : "-"}{formatCurrency(t.amount)}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
+    </View>
   );
 };

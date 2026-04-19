@@ -1,7 +1,9 @@
 import React from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { Wallet } from "lucide-react";
+import { View, Text, TouchableOpacity, Modal } from "react-native";
+import { MotiView } from "moti";
+import { Wallet } from "lucide-react-native";
 import { format } from "date-fns";
+import tw from "twrnc";
 import { formatCurrency } from "../utils";
 
 interface CarryForwardModalProps {
@@ -16,41 +18,42 @@ export const CarryForwardModal: React.FC<CarryForwardModalProps> = ({
   handleCarryForward,
 }) => {
   return (
-    <AnimatePresence>
-      {showCarryForwardModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl space-y-5"
-          >
-            <div className="w-14 h-14 bg-emerald-50 text-[#0A2E1F] rounded-full flex items-center justify-center mx-auto">
-              <Wallet size={24} />
-            </div>
-            <div className="text-center space-y-1">
-              <h3 className="text-lg font-bold text-slate-800 tracking-tight">New Month Detected!</h3>
-              <p className="text-slate-500 text-xs font-medium">
-                You had <span className="font-bold text-slate-800">{formatCurrency(pendingCarryForward)}</span> remaining in cash from last month.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <button 
-                onClick={() => handleCarryForward(true)}
-                className="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
-              >
-                Carry Forward to {format(new Date(), "MMMM")}
-              </button>
-              <button 
-                onClick={() => handleCarryForward(false)}
-                className="w-full bg-slate-100 text-slate-600 py-3.5 rounded-xl font-bold text-xs uppercase tracking-widest active:scale-95 transition-all"
-              >
-                Mark as Misc Spend
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+    <Modal
+      visible={showCarryForwardModal}
+      transparent
+      animationType="fade"
+    >
+      <View style={tw`flex-1 justify-center items-center p-6 bg-black/60`}>
+        <MotiView 
+          from={{ opacity: 0, scale: 0.9, translateY: 20 }}
+          animate={{ opacity: 1, scale: 1, translateY: 0 }}
+          style={tw`bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl gap-5`}
+        >
+          <View style={tw`w-14 h-14 bg-emerald-50 rounded-full items-center justify-center self-center`}>
+            <Wallet size={24} color="#0A2E1F" />
+          </View>
+          <View style={tw`items-center gap-1`}>
+            <Text style={tw`text-lg font-bold text-slate-800 tracking-tight`}>New Month Detected!</Text>
+            <Text style={tw`text-slate-500 text-xs font-medium text-center`}>
+              You had <Text style={tw`font-bold text-slate-800`}>{formatCurrency(pendingCarryForward)}</Text> remaining in cash from last month.
+            </Text>
+          </View>
+          <View style={tw`gap-2`}>
+            <TouchableOpacity 
+              onPress={() => handleCarryForward(true)}
+              style={tw`w-full bg-[#0A2E1F] py-3.5 rounded-xl items-center shadow-lg shadow-emerald-900/20`}
+            >
+              <Text style={tw`text-white font-bold text-xs uppercase tracking-widest`}>Carry Forward to {format(new Date(), "MMMM")}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => handleCarryForward(false)}
+              style={tw`w-full bg-slate-100 py-3.5 rounded-xl items-center`}
+            >
+              <Text style={tw`text-slate-600 font-bold text-xs uppercase tracking-widest`}>Mark as Misc Spend</Text>
+            </TouchableOpacity>
+          </View>
+        </MotiView>
+      </View>
+    </Modal>
   );
 };

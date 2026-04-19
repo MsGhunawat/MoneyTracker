@@ -1,5 +1,6 @@
 import React from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { View, Text, TouchableOpacity, ScrollView, Modal, Dimensions } from "react-native";
+import { MotiView, AnimatePresence, motify } from "moti";
 import { 
   Eye, 
   EyeOff, 
@@ -12,23 +13,25 @@ import {
   ArrowLeft,
   Edit2,
   Wallet,
-  Plus
-} from "lucide-react";
-import { format, parseISO, endOfMonth, differenceInDays, startOfMonth, eachDayOfInterval } from "date-fns";
-import { 
-  ResponsiveContainer, 
-  AreaChart, 
-  Area,
-  XAxis,
-  YAxis,
-  PieChart,
-  Pie,
-  Cell
-} from "recharts";
-import { cn } from "../lib/utils";
+  Plus,
+  MessageSquare,
+  Calendar
+} from "lucide-react-native";
+import { format, parseISO } from "date-fns";
+import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop } from "react-native-svg";
+import { LineChart, PieChart } from "react-native-gifted-charts";
+import { LinearGradient } from "expo-linear-gradient";
+import tw from "twrnc";
 import { Transaction, Account } from "../types";
+import { CATEGORY_COLORS } from "../constants";
 import { formatCurrency } from "../utils";
 import { CategoryIcon } from "./CategoryIcon";
+import { ActivityIndicator } from "react-native";
+import { SyncRange } from "../services/smsService";
+
+const MotiPath = motify(Path)();
+
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 interface DashboardProps {
   totalMonthlySpend: number;
@@ -43,6 +46,8 @@ interface DashboardProps {
   setSummaryView: (view: any) => void;
   handleTransactionClick: (t: Transaction) => void;
   openAddTransaction: () => void;
+  handleSMSSync?: (range: SyncRange) => Promise<void>;
+  isSyncingSMS?: boolean;
   monthlyBudget: number;
   cashInHand: number;
   categories: any[];
@@ -61,624 +66,581 @@ export const Dashboard: React.FC<DashboardProps> = ({
   setSummaryView,
   handleTransactionClick,
   openAddTransaction,
+  handleSMSSync,
+  isSyncingSMS,
   monthlyBudget,
   cashInHand,
   categories,
 }) => {
   const budget = monthlyBudget || 35000;
-  const daysLeft = differenceInDays(endOfMonth(new Date()), new Date());
-  const daysPassed = new Date().getDate(); // Current day of month (1-31)
   const [showAccountModal, setShowAccountModal] = React.useState(false);
   const [showCashModal, setShowCashModal] = React.useState(false);
+  const [showSyncModal, setShowSyncModal] = React.useState(false);
   const [accountModalType, setAccountModalType] = React.useState<"bank" | "credit_card">("bank");
   
-  // Dynamic trend data for sparkline based on actual transactions
-  const currentMonth = new Date();
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(currentMonth);
-  const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-  const daysInMonthCount = differenceInDays(monthEnd, monthStart) + 1;
-  const sparklineData = daysInMonth.map((day, index) => {
-    const cumulativeSpend = transactions
-      .filter(tx => tx.type === 'expense' && tx.isSpend !== false && parseISO(tx.date).getTime() <= day.getTime())
-      .reduce((sum, tx) => sum + tx.amount, 0);
+  const sparklineData = [
+    { value: 1200 },
+    { value: 4500 },
+    { value: 8900 },
+    { value: 15600 },
+    { value: 22400 },
+    { value: 28900 },
+    { value: totalMonthlySpend },
+  ];
+
+  const pieData = topSpendAreas.map(area => {
+    const cat = categories.find(c => c.label === area.category);
     return {
-      day: index + 1,
-      amount: cumulativeSpend
+      value: area.amount,
+      color: cat?.color || "#E2E8F0",
+      text: area.category
     };
   });
 
-  const bankBalance = accounts
-    .filter(acc => acc.type === 'bank')
-    .reduce((sum, acc) => sum + acc.amount, 0);
-
   const arcLength = 393.75; 
+  const progress = Math.min(totalMonthlySpend / budget, 1);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="space-y-0 pb-1"
-    >
+    <View style={tw`flex-1 bg-slate-50`}>
       {/* Modern Professional Header */}
-      <header className="bg-slate-900 text-white p-6 pb-4 rounded-b-[2.5rem] shadow-2xl relative overflow-hidden">
-        {/* Background Decorative Elements */}
-        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full -mr-32 -mt-32 blur-[100px]"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-emerald-500/5 rounded-full -ml-24 -mb-24 blur-[80px]"></div>
-        
-        <div className="flex justify-between items-center mb-2 relative z-10">
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.25em] mb-1">SpendWise Premium</p>
-            <h1 className="text-xl font-extrabold tracking-tight text-white">{format(new Date(), "MMMM yyyy")}</h1>
-          </div>
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => openAddTransaction()}
-              className="w-10 h-10 rounded-2xl bg-indigo-500 text-white shadow-lg shadow-indigo-500/30 flex items-center justify-center transition-transform active:scale-90"
-              aria-label="Quick Add"
-            >
-              <Plus size={20} strokeWidth={3} />
-            </button>
-            <div className="w-10 h-10 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center">
-              <Wallet size={18} className="text-indigo-300" />
-            </div>
-          </div>
-        </div>
-
-        {/* Circular Gauge Section */}
-        <div className="flex flex-col items-center justify-center mb-2 relative z-10">
-          <div 
-            onClick={() => {
-              setPreviousTab("dashboard");
-              setActiveTab("budget");
-            }}
-            className="w-40 h-40 relative flex items-center justify-center cursor-pointer group"
-          >
-            <div className={cn(
-              "absolute inset-0 rounded-full blur-2xl transition-colors duration-1000",
-              totalMonthlySpend > budget ? "bg-red-500/10" : "bg-emerald-500/5"
-            )}></div>
-            
-            <svg className="w-full h-full" viewBox="0 0 224 224">
-              <defs>
-                <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor={totalMonthlySpend > budget ? "#EF4444" : "#10B981"} />
-                  <stop offset="100%" stopColor={totalMonthlySpend > budget ? "#F87171" : "#34D399"} />
-                </linearGradient>
-              </defs>
-              
-              <path 
-                d="M 45 175 A 94 94 0 1 1 179 175" 
-                fill="none" 
-                stroke="rgba(255,255,255,0.05)" 
-                strokeWidth="16" 
-                strokeLinecap="round"
-              />
-              
-              <motion.path 
-                d="M 45 175 A 94 94 0 1 1 179 175" 
-                fill="none" 
-                stroke="url(#gaugeGradient)" 
-                strokeWidth="16" 
-                strokeLinecap="round"
-                strokeDasharray={arcLength}
-                initial={{ strokeDashoffset: arcLength }}
-                animate={{ strokeDashoffset: -arcLength * (1 - Math.min(totalMonthlySpend / budget, 1)) }}
-                transition={{ duration: 1.5, ease: "easeOut" }}
-              />
-            </svg>
-            
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center pt-1">
-              <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mb-0.5">
-                {totalMonthlySpend > budget ? "Over" : "Left"}
-              </p>
-              <p className={cn(
-                "text-xl font-extrabold tracking-tight",
-                totalMonthlySpend > budget ? "text-white" : "text-emerald-400"
-              )}>
-                {totalMonthlySpend > budget 
-                  ? formatCurrency(totalMonthlySpend - budget)
-                  : formatCurrency(budget - totalMonthlySpend)}
-              </p>
-              <div className="mt-1 px-2 py-0.5 bg-white/10 rounded-full">
-                <p className="text-[7px] font-bold text-white/70">{daysLeft} days left</p>
-              </div>
-            </div>
-          </div>
+      <View style={tw`bg-slate-900 rounded-b-[40px] shadow-2xl overflow-hidden`}>
+        <LinearGradient
+          colors={['#0F172A', '#1E293B']}
+          style={tw`p-6 pb-12`}
+        >
+          {/* Background Decorative Elements */}
+          <View style={[tw`absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full -mr-32 -mt-32`, { opacity: 0.1 }]} />
           
-          <div className="flex justify-between w-full max-w-[160px] mt-1">
-            <div className="text-left">
-              <p className="text-[12px] font-bold text-white/30 uppercase tracking-widest">Budget</p>
-              <p className="text-[13px] font-bold text-white/70">{formatCurrency(budget)}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-[12px] font-bold text-white/30 uppercase tracking-widest">Spent</p>
-              <p className={cn(
-                "text-[13px] font-bold",
-                totalMonthlySpend > budget ? "text-red-400" : "text-emerald-400"
-              )}>
-                {formatCurrency(totalMonthlySpend)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Glassmorphism Stats Cards */}
-        <div className="grid grid-cols-2 gap-3 relative z-10">
-          <div className="bg-white/5 border border-white/10 p-4 rounded-2xl backdrop-blur-md">
-            <div className="flex items-center gap-2 mb-2">
-              <TrendingUp size={12} className="text-indigo-400" />
-              <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest">Daily Average</p>
-            </div>
-            <p className="text-base font-bold tracking-tight text-white">{formatCurrency(daysPassed > 0 ? totalMonthlySpend / daysPassed : 0)}</p>
-          </div>
-
-          <div className="bg-white/5 border border-white/10 p-4 rounded-2xl backdrop-blur-md">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest">Bank Balance</p>
-              <button onClick={() => setShowBalance(!showBalance)} className="text-white/40 hover:text-white/60 transition-colors">
-                {showBalance ? <Eye size={12} /> : <EyeOff size={12} />}
-              </button>
-            </div>
-            <p className="text-base font-bold tracking-tight text-white">
-              {showBalance ? formatCurrency(bankBalance) : "₹XX,XXX"}
-            </p>
-          </div>
-        </div>
-      </header>
-
-      <main className="px-4 pt-8 pb-4 space-y-8 max-w-lg mx-auto">
-        {/* Latest Transactions */}
-        <section className="space-y-3">
-          <div className="flex justify-between items-center px-1">
-            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Latest Transactions</h3>
-          </div>
-          <div className="bg-white rounded-3xl p-4 shadow-sm border border-slate-100 space-y-4">
-            <div className="space-y-3">
-              {transactions
-                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                .slice(0, 3)
-                .map((t, idx, arr) => (
-                <div 
-                  key={t.id} 
-                  onClick={() => handleTransactionClick(t)}
-                  className={cn(
-                    "flex items-center justify-between group cursor-pointer active:scale-[0.98] transition-all",
-                    idx !== arr.length - 1 && "border-b border-slate-50 pb-3",
-                    !t.isSpend && "opacity-60"
-                  )}
+          <View style={tw`flex-row justify-between items-center mb-6`}>
+            <View>
+              <Text style={tw`text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1`}>SpendWise Premium</Text>
+              <Text style={tw`text-xl font-extrabold tracking-tight text-white`}>{format(new Date(), "MMMM yyyy")}</Text>
+            </View>
+            <View style={tw`flex-row items-center gap-3`}>
+                <TouchableOpacity 
+                  onPress={() => setShowSyncModal(true)}
+                  disabled={isSyncingSMS}
+                  style={tw`w-10 h-10 rounded-2xl ${isSyncingSMS ? 'bg-slate-700' : 'bg-indigo-500/20'} border border-indigo-500/30 flex items-center justify-center`}
                 >
-                  <div className="flex items-center gap-3">
-                    {(() => {
-                      const cat = categories.find(c => c.label === t.category);
-                      return (
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm" style={{ backgroundColor: t.type === "expense" ? (cat?.color || '#6366F1') : "#10B981" }}>
-                          <CategoryIcon category={t.category} size={16} />
-                        </div>
-                      );
-                    })()}
-                    <div>
-                      <p className="font-bold text-slate-700 text-sm">{t.description}</p>
-                      <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">{t.category} • {format(parseISO(t.date), "dd MMM")}</p>
-                    </div>
-                  </div>
-                  <p className={cn(
-                    "font-bold text-sm",
-                    t.type === "income" ? "text-emerald-600" : "text-slate-800"
-                  )}>
-                    {t.type === "income" ? "+" : "-"}{formatCurrency(t.amount)}
-                  </p>
-                </div>
-              ))}
-            </div>
-            
-            <button 
-              onClick={() => setActiveTab("transactions")}
-              className="w-full py-3 bg-slate-50 text-indigo-600 rounded-xl text-xs font-bold uppercase tracking-widest active:scale-95 transition-all border border-slate-100"
+                  {isSyncingSMS ? (
+                    <ActivityIndicator size="small" color="#818CF8" />
+                  ) : (
+                    <MessageSquare size={18} color="#A5B4FC" />
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => openAddTransaction()}
+                  style={tw`w-10 h-10 rounded-2xl bg-indigo-500 flex items-center justify-center shadow-lg`}
+                >
+                  <Plus size={20} color="white" strokeWidth={3} />
+                </TouchableOpacity>
+              <View style={tw`w-10 h-10 rounded-2xl bg-white/10 border border-white/10 flex items-center justify-center`}>
+                <Wallet size={18} color="#A5B4FC" />
+              </View>
+            </View>
+          </View>
+
+          {/* Circular Gauge Section */}
+          <View style={tw`flex-col items-center justify-center mb-6`}>
+            <TouchableOpacity 
+              onPress={() => {
+                setPreviousTab("dashboard");
+                setActiveTab("budget");
+              }}
+              style={tw`w-40 h-40 relative flex items-center justify-center`}
             >
-              View All Transactions
-            </button>
-          </div>
-        </section>
+              <View style={[tw`absolute inset-0 rounded-full`, { backgroundColor: totalMonthlySpend > budget ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.05)', filter: 'blur(20px)' }]} />
+              
+              <Svg width="160" height="160" viewBox="0 0 224 224">
+                <Defs>
+                  <SvgGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <Stop offset="0%" stopColor={totalMonthlySpend > budget ? "#EF4444" : "#10B981"} />
+                    <Stop offset="100%" stopColor={totalMonthlySpend > budget ? "#F87171" : "#34D399"} />
+                  </SvgGradient>
+                </Defs>
+                
+                <Path 
+                  d="M 45 175 A 94 94 0 1 1 179 175" 
+                  fill="none" 
+                  stroke="rgba(255,255,255,0.05)" 
+                  strokeWidth="16" 
+                  strokeLinecap="round"
+                />
+                
+                <Path 
+                  d="M 45 175 A 94 94 0 1 1 179 175" 
+                  fill="none" 
+                  stroke="url(#gaugeGradient)" 
+                  strokeWidth="16" 
+                  strokeLinecap="round"
+                  strokeDasharray={arcLength}
+                  strokeDashoffset={arcLength * (1 - progress)}
+                />
+              </Svg>
+              
+              <View style={tw`absolute inset-0 flex flex-col items-center justify-center pt-1`}>
+                <Text style={tw`text-[8px] font-bold text-white/40 uppercase tracking-widest mb-0.5`}>
+                  {totalMonthlySpend > budget ? "Over" : "Left"}
+                </Text>
+                <Text style={tw`text-xl font-extrabold tracking-tight ${totalMonthlySpend > budget ? "text-white" : "text-emerald-400"}`}>
+                  {totalMonthlySpend > budget 
+                    ? formatCurrency(totalMonthlySpend - budget)
+                    : formatCurrency(budget - totalMonthlySpend)}
+                </Text>
+                <View style={tw`mt-1 px-2 py-0.5 bg-white/10 rounded-full`}>
+                  <Text style={tw`text-[7px] font-bold text-white/70`}>24 days left</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <View style={tw`flex-row justify-between w-full max-w-[160px] mt-1`}>
+              <View>
+                <Text style={tw`text-[7px] font-bold text-white/30 uppercase tracking-widest`}>Budget</Text>
+                <Text style={tw`text-[9px] font-bold text-white/70`}>{formatCurrency(budget)}</Text>
+              </View>
+              <View style={tw`items-end`}>
+                <Text style={tw`text-[7px] font-bold text-white/30 uppercase tracking-widest`}>Spent</Text>
+                <Text style={tw`text-[9px] font-bold ${totalMonthlySpend > budget ? "text-red-400" : "text-emerald-400"}`}>
+                  {formatCurrency(totalMonthlySpend)}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Stats Cards */}
+          <View style={tw`flex-row gap-2`}>
+            <View style={tw`flex-1 bg-white/5 border border-white/10 p-3 rounded-2xl`}>
+              <View style={tw`flex-row items-center justify-between mb-1.5`}>
+                <Text style={tw`text-[7px] font-bold text-white/40 uppercase tracking-widest`}>Bank Balance</Text>
+                <TouchableOpacity onPress={() => setShowBalance(!showBalance)}>
+                  {showBalance ? <Eye size={10} color="rgba(255,255,255,0.4)" /> : <EyeOff size={10} color="rgba(255,255,255,0.4)" />}
+                </TouchableOpacity>
+              </View>
+              <Text style={tw`text-xs font-bold tracking-tight text-white`}>
+                {showBalance ? "₹45,230" : "₹XX,XXX"}
+              </Text>
+            </View>
+
+            <View style={tw`flex-1 bg-white/5 border border-white/10 p-3 rounded-2xl`}>
+              <Text style={tw`text-[7px] font-bold text-white/40 uppercase tracking-widest mb-1.5`}>Total Spend</Text>
+              <Text style={tw`text-xs font-bold tracking-tight text-white`}>{formatCurrency(totalMonthlySpend)}</Text>
+            </View>
+
+            <View style={tw`flex-1 bg-white/5 border border-white/10 p-3 rounded-2xl`}>
+              <View style={tw`flex-row items-center gap-1.5 mb-1.5`}>
+                <TrendingUp size={10} color="#818CF8" />
+                <Text style={tw`text-[7px] font-bold text-white/40 uppercase tracking-widest`}>Daily Insights</Text>
+              </View>
+              <Text style={tw`text-xs font-bold tracking-tight text-white`}>{formatCurrency(totalMonthlySpend / 30)}</Text>
+            </View>
+          </View>
+        </LinearGradient>
+      </View>
+
+      <ScrollView style={tw`flex-1 px-4 pt-8 pb-4`}>
+        {/* Latest Transactions */}
+        <View style={tw`mb-8`}>
+          <Text style={tw`text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3`}>Latest Transactions</Text>
+          <View style={tw`bg-white rounded-3xl p-4 shadow-sm border border-slate-100`}>
+            {transactions
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+              .slice(0, 3)
+              .map((t, idx, arr) => (
+              <TouchableOpacity 
+                key={t.id} 
+                onPress={() => handleTransactionClick(t)}
+                style={tw`flex-row items-center justify-between py-3 ${idx !== arr.length - 1 ? "border-b border-slate-50" : ""} ${!t.isSpend ? "opacity-40" : ""}`}
+              >
+                <View style={tw`flex-row items-center gap-3`}>
+                  <View style={[tw`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm`, { backgroundColor: t.type === "expense" ? (categories.find(c => c.label === t.category)?.color || "#6366F1") : "#10B981" }]}>
+                    <CategoryIcon category={t.category} size={16} color="white" />
+                  </View>
+                  <View>
+                    <Text style={tw`font-bold text-slate-800 text-sm`}>{t.description}</Text>
+                    <Text style={tw`text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5`}>{t.category} • {format(parseISO(t.date), "dd MMM")}</Text>
+                  </View>
+                </View>
+                <Text style={tw`font-bold text-sm ${t.type === "income" ? "text-emerald-600" : "text-slate-800"}`}>
+                  {t.type === "income" ? "+" : "-"}{formatCurrency(t.amount)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            
+            <TouchableOpacity 
+              onPress={() => setActiveTab("transactions")}
+              style={tw`w-full py-3 bg-slate-50 rounded-xl mt-4 border border-slate-100 items-center`}
+            >
+              <Text style={tw`text-indigo-600 text-xs font-bold uppercase tracking-widest`}>View All Transactions</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Top Spend Areas */}
-        <section className="space-y-3">
-          <div className="flex justify-between items-center px-1">
-            <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Top Spend Areas</h3>
-          </div>
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 relative overflow-hidden">
-            {/* Pie Chart Visualization */}
-            <div className="h-48 w-full mb-6 relative flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={topSpendAreas}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={75}
-                    paddingAngle={2}
-                    dataKey="amount"
-                    stroke="none"
-                  >
-                    {topSpendAreas.map((entry, index) => {
-                      const cat = categories.find(c => c.label === entry.category);
-                      return <Cell key={`cell-${index}`} fill={cat?.color || '#E2E8F0'} />;
-                    })}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Total</p>
-                <p className="text-sm font-bold text-slate-800">{formatCurrency(totalMonthlySpend)}</p>
-              </div>
-            </div>
+        <View style={tw`mb-8`}>
+          <Text style={tw`text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3`}>Top Spend Areas</Text>
+          <View style={tw`bg-white rounded-3xl p-5 shadow-sm border border-slate-100`}>
+            <View style={tw`h-48 w-full mb-6 items-center justify-center`}>
+              <PieChart
+                data={pieData}
+                donut
+                radius={75}
+                innerRadius={55}
+                innerCircleColor={'white'}
+                centerLabelComponent={() => (
+                  <View style={tw`items-center`}>
+                    <Text style={tw`text-[8px] font-bold text-slate-400 uppercase tracking-widest`}>Total</Text>
+                    <Text style={tw`text-sm font-bold text-slate-800`}>{formatCurrency(totalMonthlySpend)}</Text>
+                  </View>
+                )}
+              />
+            </View>
 
-            {/* Spend Areas List - Top 3 */}
-            <div className="grid grid-cols-1 gap-4 mb-6">
+            <View style={tw`mb-6 gap-4`}>
               {topSpendAreas.slice(0, 3).map((area) => {
                 const cat = categories.find(c => c.label === area.category);
                 return (
-                  <div 
+                  <TouchableOpacity 
                     key={area.category} 
-                    className="flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform"
-                    onClick={() => {
+                    onPress={() => {
                       setPreviousTab("dashboard");
                       setSelectedCategory(area.category);
                       setActiveTab("categoryDetail");
                     }}
+                    style={tw`flex-row items-center gap-3`}
                   >
-                    <div className="w-8 h-8 rounded-full border flex items-center justify-center shrink-0" style={{ borderColor: (cat?.color || '#6366F1') + '20', color: cat?.color || '#6366F1' }}>
-                       <CategoryIcon category={area.category} size={14} icon={cat?.icon} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-center mb-1">
-                        <h4 className="font-bold text-slate-700 text-sm">{area.category}</h4>
-                        <p className="font-bold text-slate-800 text-sm">{formatCurrency(area.amount)}</p>
-                      </div>
-                      <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
-                        <motion.div 
-                          initial={{ width: 0 }}
-                          animate={{ width: `${area.percentage}%` }}
-                          className="h-full rounded-full"
-                          style={{ backgroundColor: cat?.color || '#6366F1' }}
-                        />
-                      </div>
-                    </div>
-                  </div>
+                    <View style={[tw`w-8 h-8 rounded-full border flex items-center justify-center`, { borderColor: (cat?.color || '#6366F1') + '20' }]}>
+                       <CategoryIcon category={area.category} size={14} color={cat?.color || '#6366F1'} />
+                    </View>
+                    <View style={tw`flex-1`}>
+                      <View style={tw`flex-row justify-between items-center mb-1`}>
+                        <Text style={tw`font-bold text-slate-700 text-sm`}>{area.category}</Text>
+                        <Text style={tw`font-bold text-slate-800 text-sm`}>{formatCurrency(area.amount)}</Text>
+                      </View>
+                      <View style={tw`w-full bg-slate-100 h-1 rounded-full overflow-hidden`}>
+                        <View style={[tw`h-full rounded-full`, { width: `${area.percentage}%`, backgroundColor: cat?.color || '#6366F1' }]} />
+                      </View>
+                    </View>
+                  </TouchableOpacity>
                 );
               })}
-            </div>
+            </View>
 
-            <button 
-              onClick={() => {
+            <TouchableOpacity 
+              onPress={() => {
                 setActiveTab("summary");
                 setSummaryView("spendAreas");
               }}
-              className="w-full py-3 bg-slate-50 text-indigo-600 rounded-xl text-xs font-bold uppercase tracking-widest active:scale-95 transition-all border border-slate-100"
+              style={tw`w-full py-3 bg-slate-50 rounded-xl border border-slate-100 items-center`}
             >
-              View All Spend Areas
-            </button>
-          </div>
-        </section>
+              <Text style={tw`text-indigo-600 text-xs font-bold uppercase tracking-widest`}>View All Spend Areas</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Cash Wallet Section */}
-        <section className="space-y-3">
-          <div className="flex justify-between items-center px-1">
-            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cash Wallet</h3>
-          </div>
-          <div 
-            onClick={() => setShowCashModal(true)}
-            className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 cursor-pointer active:scale-[0.98] transition-all"
+        <View style={tw`mb-8`}>
+          <Text style={tw`text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3`}>Cash Wallet</Text>
+          <TouchableOpacity 
+            onPress={() => setShowCashModal(true)}
+            style={tw`bg-white rounded-3xl p-5 shadow-sm border border-slate-100`}
           >
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-amber-500 text-white rounded-xl flex items-center justify-center shadow-sm">
-                  <Wallet size={20} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800">Cash Wallet</h3>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Physical Cash</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-bold text-slate-800">{formatCurrency(cashInHand)}</p>
-                <button className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">Details</button>
-              </div>
-            </div>
+            <View style={tw`flex-row justify-between items-start mb-4`}>
+              <View style={tw`flex-row items-center gap-3`}>
+                <View style={tw`w-10 h-10 bg-amber-500 rounded-xl flex items-center justify-center shadow-sm`}>
+                  <Wallet size={20} color="white" />
+                </View>
+                <View>
+                  <Text style={tw`text-sm font-bold text-slate-800`}>Cash Wallet</Text>
+                  <Text style={tw`text-[10px] text-slate-400 font-bold uppercase tracking-widest`}>Physical Cash</Text>
+                </View>
+              </View>
+              <View style={tw`items-end`}>
+                <Text style={tw`text-sm font-bold text-slate-800`}>{formatCurrency(cashInHand)}</Text>
+                <Text style={tw`text-[10px] font-bold text-indigo-600 uppercase tracking-widest`}>Details</Text>
+              </View>
+            </View>
             
-            <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden flex mb-3">
-              <motion.div 
-                initial={{ width: 0 }}
-                animate={{ width: '15%' }}
-                className="h-full bg-emerald-500" 
-              />
-              <div className="flex-1 bg-red-400"></div>
-            </div>
+            <View style={tw`w-full h-1.5 bg-slate-100 rounded-full overflow-hidden flex-row mb-3`}>
+              <View style={[tw`h-full bg-emerald-500`, { width: '15%' }]} />
+              <View style={tw`flex-1 bg-red-400`} />
+            </View>
             
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-[10px] font-bold text-slate-800">₹24,356</p>
-                <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest">Spend</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] font-bold text-slate-800">₹28,756</p>
-                <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest">Withdrawn</p>
-              </div>
-            </div>
-          </div>
-        </section>
+            <View style={tw`flex-row justify-between items-center`}>
+              <View>
+                <Text style={tw`text-[10px] font-bold text-slate-800`}>₹24,356</Text>
+                <Text style={tw`text-[8px] text-slate-400 font-bold uppercase tracking-widest`}>Spend</Text>
+              </View>
+              <View style={tw`items-end`}>
+                <Text style={tw`text-[10px] font-bold text-slate-800`}>₹28,756</Text>
+                <Text style={tw`text-[8px] text-slate-400 font-bold uppercase tracking-widest`}>Withdrawn</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </View>
 
         {/* My Accounts Section */}
-        <section className="space-y-3">
-          <div className="flex justify-between items-center px-1">
-            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">My Accounts</h3>
-            <button className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">View All</button>
-          </div>
-          <div className="bg-white rounded-3xl p-1 shadow-sm border border-slate-100 overflow-hidden">
-            <div 
-              onClick={() => {
+        <View style={tw`mb-20`}>
+          <View style={tw`flex-row justify-between items-center mb-3`}>
+            <Text style={tw`text-[10px] font-bold text-slate-400 uppercase tracking-widest`}>My Accounts</Text>
+            <Text style={tw`text-[10px] font-bold text-indigo-600 uppercase tracking-widest`}>View All</Text>
+          </View>
+          <View style={tw`bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden`}>
+            <TouchableOpacity 
+              onPress={() => {
                 setAccountModalType("bank");
                 setShowAccountModal(true);
               }}
-              className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors cursor-pointer active:bg-slate-100"
+              style={tw`flex-row items-center justify-between p-4 border-b border-slate-50`}
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
-                  <Landmark size={20} />
-                </div>
-                <div>
-                  <p className="font-bold text-slate-800 text-sm">Bank Account</p>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{accounts.filter(a => a.type === "bank").length} accounts</p>
-                </div>
-              </div>
-              <ChevronRight size={16} className="text-slate-300" />
-            </div>
+              <View style={tw`flex-row items-center gap-3`}>
+                <View style={tw`w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center`}>
+                  <Landmark size={20} color="#2563EB" />
+                </View>
+                <View>
+                  <Text style={tw`font-bold text-slate-800 text-sm`}>Bank Account</Text>
+                  <Text style={tw`text-[10px] text-slate-400 font-bold uppercase tracking-wider`}>{accounts.filter(a => a.type === "bank").length} accounts</Text>
+                </View>
+              </View>
+              <ChevronRight size={16} color="#CBD5E1" />
+            </TouchableOpacity>
             
-            <div className="h-px bg-slate-50 mx-4"></div>
-            
-            <div 
-              onClick={() => {
+            <TouchableOpacity 
+              onPress={() => {
                 setAccountModalType("credit_card");
                 setShowAccountModal(true);
               }}
-              className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors cursor-pointer active:bg-slate-100"
+              style={tw`flex-row items-center justify-between p-4`}
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600">
-                  <CreditCard size={20} />
-                </div>
-                <div>
-                  <p className="font-bold text-slate-800 text-sm">Credit card</p>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{accounts.filter(a => a.type === "credit_card").length} cards</p>
-                </div>
-              </div>
-              <ChevronRight size={16} className="text-slate-300" />
-            </div>
-          </div>
-        </section>
-      </main>
-
-      {/* Cash Details Modal */}
-      <AnimatePresence>
-        {showCashModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 backdrop-blur-sm"
-            onClick={() => setShowCashModal(false)}
-          >
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="w-full max-w-lg bg-[#0A2E1F] rounded-t-[3rem] overflow-hidden flex flex-col h-[90vh]"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Modal Header */}
-              <div className="p-6 pb-8 text-white">
-                <div className="flex justify-between items-center mb-8">
-                  <button 
-                    onClick={() => setShowCashModal(false)}
-                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white"
-                  >
-                    <ArrowLeft size={20} />
-                  </button>
-                  <button className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white">
-                    <Edit2 size={18} />
-                  </button>
-                </div>
-                
-                <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest mb-1">Cash Wallet Balance</p>
-                <p className="text-[10px] text-indigo-200/60 font-bold mb-4">
-                  Current Month
-                </p>
-                <p className="text-4xl font-black tracking-tighter">
-                  {formatCurrency(cashInHand)}
-                </p>
-              </div>
-
-              {/* Cash Stats */}
-              <div className="bg-white/5 px-6 py-4 border-b border-white/5 grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mb-1">Total Withdrawn</p>
-                  <p className="text-lg font-bold text-white">₹28,756</p>
-                </div>
-                <div>
-                  <p className="text-[8px] font-bold text-white/40 uppercase tracking-widest mb-1">Total Spent</p>
-                  <p className="text-lg font-bold text-white">₹24,356</p>
-                </div>
-              </div>
-
-              {/* Cash Transactions List */}
-              <div className="flex-1 bg-white overflow-y-auto p-6 space-y-6">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Cash Transactions</h4>
-                <div className="space-y-4">
-                  {transactions
-                    .filter(t => t.paymentMethod === 'cash')
-                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                    .map((t, idx, arr) => (
-                    <div 
-                      key={t.id} 
-                      onClick={() => {
-                        handleTransactionClick(t);
-                        setShowCashModal(false);
-                      }}
-                      className={cn(
-                        "flex items-center justify-between group cursor-pointer active:scale-95 transition-all",
-                        idx !== arr.length - 1 && "border-b border-slate-50 pb-4"
-                      )}
-                    >
-                      <div className="flex items-center gap-3">
-                        {(() => {
-                          const cat = categories.find(c => c.label === t.category);
-                          return (
-                            <div className={cn(
-                              "w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-md",
-                              t.type === "income" ? "bg-green-500" : "bg-indigo-500"
-                            )} style={{ backgroundColor: t.type === "expense" ? (cat?.color || '#6366F1') : undefined }}>
-                              <CategoryIcon category={t.category} size={18} icon={cat?.icon} />
-                            </div>
-                          );
-                        })()}
-                        <div>
-                          <p className="font-bold text-slate-800 text-sm">{t.description}</p>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{t.category} • {format(parseISO(t.date), "dd MMM")}</p>
-                        </div>
-                      </div>
-                      <p className={cn(
-                        "font-bold text-base",
-                        t.type === "income" ? "text-green-500" : "text-slate-800"
-                      )}>
-                        {t.type === "income" ? "+" : "-"}{formatCurrency(t.amount)}
-                      </p>
-                    </div>
-                  ))}
-                  {transactions.filter(t => t.paymentMethod === 'cash').length === 0 && (
-                    <div className="text-center py-12">
-                      <p className="text-slate-400 text-sm italic">No cash transactions yet</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <View style={tw`flex-row items-center gap-3`}>
+                <View style={tw`w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center`}>
+                  <CreditCard size={20} color="#4F46E5" />
+                </View>
+                <View>
+                  <Text style={tw`font-bold text-slate-800 text-sm`}>Credit card</Text>
+                  <Text style={tw`text-[10px] text-slate-400 font-bold uppercase tracking-wider`}>{accounts.filter(a => a.type === "credit_card").length} cards</Text>
+                </View>
+              </View>
+              <ChevronRight size={16} color="#CBD5E1" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
 
       {/* Account Details Modal */}
-      <AnimatePresence>
-        {showAccountModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-end justify-center bg-black/60 backdrop-blur-sm"
-            onClick={() => setShowAccountModal(false)}
-          >
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="w-full max-w-lg bg-[#0A2E1F] rounded-t-[3rem] overflow-hidden flex flex-col h-[90vh]"
-              onClick={(e) => e.stopPropagation()}
+      <Modal
+        visible={showAccountModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAccountModal(false)}
+      >
+        <View style={tw`flex-1 bg-black/60 justify-end`}>
+          <TouchableOpacity style={tw`flex-1`} onPress={() => setShowAccountModal(false)} />
+          <View style={tw`bg-slate-900 rounded-t-[40px] h-[90%] overflow-hidden`}>
+            <LinearGradient
+              colors={['#0F172A', '#1E293B']}
+              style={tw`p-6 pb-8`}
             >
-              {/* Modal Header */}
-              <div className="p-6 pb-8 text-white">
-                <div className="flex justify-between items-center mb-8">
-                  <button 
-                    onClick={() => setShowAccountModal(false)}
-                    className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white"
-                  >
-                    <ArrowLeft size={20} />
-                  </button>
-                  <button className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white">
-                    <Edit2 size={18} />
-                  </button>
-                </div>
-                
-                <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest mb-1">Current Total Balance</p>
-                <p className="text-[10px] text-indigo-200/60 font-bold mb-4">
-                  {accounts.filter(a => a.type === accountModalType).length} Accounts
-                </p>
-                <p className="text-4xl font-black tracking-tighter">
-                  {formatCurrency(accounts.filter(a => a.type === accountModalType).reduce((sum, a) => sum + a.amount, 0))}
-                </p>
-              </div>
+              <View style={tw`flex-row justify-between items-center mb-8`}>
+                <TouchableOpacity onPress={() => setShowAccountModal(false)} style={tw`w-10 h-10 rounded-full bg-white/10 items-center justify-center`}>
+                  <ArrowLeft size={20} color="white" />
+                </TouchableOpacity>
+                <TouchableOpacity style={tw`w-10 h-10 rounded-full bg-white/10 items-center justify-center`}>
+                  <Edit2 size={18} color="white" />
+                </TouchableOpacity>
+              </View>
+              
+              <Text style={tw`text-slate-300 text-xs font-bold uppercase tracking-widest mb-1`}>Current Total Balance</Text>
+              <Text style={tw`text-[10px] text-slate-400 font-bold mb-4`}>
+                {accounts.filter(a => a.type === accountModalType).length} Accounts
+              </Text>
+              <Text style={tw`text-4xl font-black text-white tracking-tighter`}>
+                {formatCurrency(accounts.filter(a => a.type === accountModalType).reduce((sum, a) => sum + a.amount, 0))}
+              </Text>
+            </LinearGradient>
 
-              {/* Tabs */}
-              <div className="flex px-6 border-b border-white/5">
-                <button 
-                  onClick={() => setAccountModalType("bank")}
-                  className={cn(
-                    "flex-1 py-4 text-xs font-bold uppercase tracking-widest transition-all relative",
-                    accountModalType === "bank" ? "text-white" : "text-white/40"
-                  )}
-                >
-                  Bank A/C
-                  {accountModalType === "bank" && (
-                    <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-white" />
-                  )}
-                </button>
-                <button 
-                  onClick={() => setAccountModalType("credit_card")}
-                  className={cn(
-                    "flex-1 py-4 text-xs font-bold uppercase tracking-widest transition-all relative",
-                    accountModalType === "credit_card" ? "text-white" : "text-white/40"
-                  )}
-                >
-                  Credit Cards
-                  {accountModalType === "credit_card" && (
-                    <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-white" />
-                  )}
-                </button>
-              </div>
+            <View style={tw`flex-row px-6 border-b border-indigo-500/10 bg-slate-900`}>
+              <TouchableOpacity 
+                onPress={() => setAccountModalType("bank")}
+                style={tw`flex-1 py-4 items-center ${accountModalType === "bank" ? "border-b-2 border-indigo-400" : ""}`}
+              >
+                <Text style={tw`text-xs font-bold uppercase tracking-widest ${accountModalType === "bank" ? "text-white" : "text-white/40"}`}>Bank A/C</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => setAccountModalType("credit_card")}
+                style={tw`flex-1 py-4 items-center ${accountModalType === "credit_card" ? "border-b-2 border-indigo-400" : ""}`}
+              >
+                <Text style={tw`text-xs font-bold uppercase tracking-widest ${accountModalType === "credit_card" ? "text-white" : "text-white/40"}`}>Credit Cards</Text>
+              </TouchableOpacity>
+            </View>
 
-              {/* Account List */}
-              <div className="flex-1 bg-white overflow-y-auto p-6 space-y-6">
-                {accounts.filter(a => a.type === accountModalType).map((account) => (
-                  <div key={account.id} className="flex items-center justify-between group">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full border border-slate-100 flex items-center justify-center bg-slate-50 overflow-hidden">
-                        {accountModalType === "bank" ? (
-                          <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-[10px]">
-                            {account.name.includes("SBI") ? "SBI" : "AU"}
-                          </div>
-                        ) : (
-                          <div className="w-8 h-8 flex items-center justify-center">
-                             {account.name.includes("Axis") ? (
-                               <div className="text-pink-600 font-black text-lg italic">A</div>
-                             ) : (
-                               <div className="text-orange-600 font-black text-lg italic">i</div>
-                             )}
-                          </div>
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-bold text-slate-800 text-sm">{account.name}</p>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{account.number}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-slate-800 text-sm">
-                        {accountModalType === "credit_card" && account.amount > 0 ? "-" : ""}
-                        {formatCurrency(account.amount)}
-                      </p>
-                      <p className="text-[9px] text-slate-400 font-bold">
-                        {account.isEstimated ? "Estimated Bal" : `Updated ${format(parseISO(account.updatedAt), "dd MMM")}`}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
+            <ScrollView style={tw`flex-1 bg-white p-6`}>
+              {accounts.filter(a => a.type === accountModalType).map((account) => (
+                <View key={account.id} style={tw`flex-row items-center justify-between mb-6`}>
+                  <View style={tw`flex-row items-center gap-4`}>
+                    <View style={tw`w-12 h-12 rounded-full border border-slate-100 items-center justify-center bg-slate-50 overflow-hidden`}>
+                      {accountModalType === "bank" ? (
+                        <View style={tw`w-8 h-8 rounded-full bg-blue-600 items-center justify-center`}>
+                          <Text style={tw`text-white font-bold text-[10px]`}>{account.name.includes("SBI") ? "SBI" : "AU"}</Text>
+                        </View>
+                      ) : (
+                        <View style={tw`w-8 h-8 items-center justify-center`}>
+                           <Text style={tw`text-pink-600 font-black text-lg italic`}>{account.name.includes("Axis") ? "A" : "i"}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <View>
+                      <Text style={tw`font-bold text-slate-800 text-sm`}>{account.name}</Text>
+                      <Text style={tw`text-[10px] text-slate-400 font-bold uppercase tracking-wider`}>{account.number}</Text>
+                    </View>
+                  </View>
+                  <View style={tw`items-end`}>
+                    <Text style={tw`font-bold text-slate-800 text-sm`}>
+                      {accountModalType === "credit_card" && account.amount > 0 ? "-" : ""}
+                      {formatCurrency(account.amount)}
+                    </Text>
+                    <Text style={tw`text-[9px] text-slate-400 font-bold`}>
+                      {account.isEstimated ? "Estimated Bal" : `Updated ${format(parseISO(account.updatedAt), "dd MMM")}`}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Cash Details Modal */}
+      <Modal
+        visible={showCashModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowCashModal(false)}
+      >
+        <View style={tw`flex-1 bg-black/60 justify-end`}>
+          <TouchableOpacity style={tw`flex-1`} onPress={() => setShowCashModal(false)} />
+          <View style={tw`bg-slate-900 rounded-t-[40px] h-[90%] overflow-hidden`}>
+            <LinearGradient
+              colors={['#0F172A', '#1E293B']}
+              style={tw`p-6 pb-8`}
+            >
+              <View style={tw`flex-row justify-between items-center mb-8`}>
+                <TouchableOpacity onPress={() => setShowCashModal(false)} style={tw`w-10 h-10 rounded-full bg-white/10 items-center justify-center`}>
+                  <ArrowLeft size={20} color="white" />
+                </TouchableOpacity>
+                <TouchableOpacity style={tw`w-10 h-10 rounded-full bg-white/10 items-center justify-center`}>
+                  <Edit2 size={18} color="white" />
+                </TouchableOpacity>
+              </View>
+              
+              <Text style={tw`text-slate-300 text-xs font-bold uppercase tracking-widest mb-1`}>Cash Wallet Balance</Text>
+              <Text style={tw`text-[10px] text-slate-400 font-bold mb-4`}>
+                Current Month
+              </Text>
+              <Text style={tw`text-4xl font-black text-white tracking-tighter`}>
+                {formatCurrency(cashInHand)}
+              </Text>
+            </LinearGradient>
+
+            <View style={tw`bg-white/5 px-6 py-4 border-b border-white/5 flex-row gap-4 bg-slate-900`}>
+              <View style={tw`flex-1`}>
+                <Text style={tw`text-[8px] font-bold text-white/40 uppercase tracking-widest mb-1`}>Total Withdrawn</Text>
+                <Text style={tw`text-lg font-bold text-white`}>₹28,756</Text>
+              </View>
+              <View style={tw`flex-1`}>
+                <Text style={tw`text-[8px] font-bold text-white/40 uppercase tracking-widest mb-1`}>Total Spent</Text>
+                <Text style={tw`text-lg font-bold text-white`}>₹24,356</Text>
+              </View>
+            </View>
+
+            <ScrollView style={tw`flex-1 bg-white p-6`}>
+              <Text style={tw`text-xs font-bold text-slate-400 uppercase tracking-widest mb-6`}>Cash Transactions</Text>
+              {transactions
+                .filter(t => t.paymentMethod === 'cash')
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                .map((t, idx, arr) => (
+                <TouchableOpacity 
+                  key={t.id} 
+                  onPress={() => {
+                    handleTransactionClick(t);
+                    setShowCashModal(false);
+                  }}
+                  style={tw`flex-row items-center justify-between py-4 ${idx !== arr.length - 1 ? "border-b border-slate-50" : ""}`}
+                >
+                  <View style={tw`flex-row items-center gap-3`}>
+                    <View style={[tw`w-10 h-10 rounded-xl flex items-center justify-center shadow-md`, { backgroundColor: t.type === "expense" ? (categories.find(c => c.label === t.category)?.color || "#6366F1") : "#10B981" }]}>
+                      <CategoryIcon category={t.category} size={18} color="white" />
+                    </View>
+                    <View>
+                      <Text style={tw`font-bold text-slate-800 text-sm`}>{t.description}</Text>
+                      <Text style={tw`text-[10px] text-slate-400 font-bold uppercase tracking-wider`}>{t.category} • {format(parseISO(t.date), "dd MMM")}</Text>
+                    </View>
+                  </View>
+                  <Text style={tw`font-bold text-base ${t.type === "income" ? "text-green-500" : "text-slate-800"}`}>
+                    {t.type === "income" ? "+" : "-"}{formatCurrency(t.amount)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              {transactions.filter(t => t.paymentMethod === 'cash').length === 0 && (
+                <View style={tw`items-center py-12`}>
+                  <Text style={tw`text-slate-400 text-sm italic`}>No cash transactions yet</Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* SMS Sync Range Modal */}
+      <Modal
+        visible={showSyncModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowSyncModal(false)}
+      >
+        <View style={tw`flex-1 bg-black/60 justify-center items-center px-6`}>
+          <View style={tw`bg-white w-full rounded-[30px] p-6 shadow-2xl`}>
+            <View style={tw`flex-row justify-between items-center mb-6`}>
+              <View>
+                <Text style={tw`text-lg font-bold text-slate-800`}>Sync SMS</Text>
+                <Text style={tw`text-[10px] text-slate-400 font-bold uppercase tracking-widest`}>Fetch missing transactions</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowSyncModal(false)} style={tw`p-2 bg-slate-50 rounded-full`}>
+                <X size={18} color="#94A3B8" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={tw`gap-3 mb-6`}>
+              {[
+                { label: 'Today', value: 'today', desc: 'Scan messages received today' },
+                { label: 'Last Week', value: 'week', desc: 'Scan messages from past 7 days' },
+                { label: 'Last Month', value: 'month', desc: 'Scan messages from past 30 days' },
+                { label: 'All Time', value: 'all', desc: 'Scan all available inbox messages' }
+              ].map((opt) => (
+                <TouchableOpacity 
+                  key={opt.value}
+                  onPress={() => {
+                    setShowSyncModal(false);
+                    handleSMSSync?.(opt.value as SyncRange);
+                  }}
+                  style={tw`flex-row items-center gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-100`}
+                >
+                  <View style={tw`w-10 h-10 bg-white rounded-xl items-center justify-center shadow-sm`}>
+                    <Calendar size={18} color="#6366F1" />
+                  </View>
+                  <View>
+                    <Text style={tw`font-bold text-slate-800 text-sm`}>{opt.label}</Text>
+                    <Text style={tw`text-[10px] text-slate-400 font-semibold`}>{opt.desc}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={tw`text-[9px] text-slate-400 italic text-center leading-relaxed`}>
+              Duplicates will be automatically skipped based on amount and date.
+            </Text>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 };

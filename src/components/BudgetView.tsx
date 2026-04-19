@@ -1,6 +1,9 @@
 import React, { useState } from "react";
-import { motion } from "motion/react";
-import { ArrowLeft, Wallet, ShoppingCart, CreditCard, Banknote } from "lucide-react";
+import { View, Text, TouchableOpacity, TextInput, ScrollView, Dimensions } from "react-native";
+import { MotiView } from "moti";
+import { ArrowLeft, Wallet, ShoppingCart, CreditCard, Banknote } from "lucide-react-native";
+import Svg, { Path } from "react-native-svg";
+import tw from "twrnc";
 import { formatCurrency } from "../utils";
 
 interface BudgetViewProps {
@@ -27,102 +30,100 @@ export const BudgetView: React.FC<BudgetViewProps> = ({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: 20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -20 }}
-      className="fixed inset-0 bg-slate-50 z-50 overflow-y-auto pb-10 max-w-lg mx-auto"
-    >
-      {/* Header */}
-      <header className="p-4 flex items-center gap-3">
-        <button 
-          onClick={() => setActiveTab(previousTab)}
-          className="w-9 h-9 flex items-center justify-center bg-slate-50 rounded-xl text-slate-600 active:scale-90 transition-transform"
-        >
-          <ArrowLeft size={18} />
-        </button>
-        <div>
-          <h1 className="text-lg font-bold text-slate-800 tracking-tight">Monthly budget</h1>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Your spend trend</p>
-        </div>
-      </header>
+    <View style={tw`flex-1 bg-white`}>
+      <ScrollView contentContainerStyle={tw`pb-10`}>
+        {/* Header */}
+        <View style={tw`p-4 pt-12 flex-row items-center gap-3`}>
+          <TouchableOpacity 
+            onPress={() => setActiveTab(previousTab)}
+            style={tw`w-9 h-9 items-center justify-center bg-slate-50 rounded-xl`}
+          >
+            <ArrowLeft size={18} color="#475569" />
+          </TouchableOpacity>
+          <View>
+            <Text style={tw`text-lg font-bold text-slate-800 tracking-tight`}>Monthly budget</Text>
+            <Text style={tw`text-[10px] text-slate-400 font-bold uppercase tracking-widest`}>Your spend trend</Text>
+          </View>
+        </View>
 
-      {/* Illustration Section */}
-      <div className="px-6 py-4 flex flex-col items-center text-center relative overflow-hidden">
-        <div className="w-full max-w-[240px] aspect-square relative flex items-center justify-center mb-6">
-          {/* Semi-circle Gauge Illustration */}
-          <div className="absolute inset-0 flex items-center justify-center">
-             <svg className="w-full h-full -rotate-180 opacity-10" viewBox="0 0 200 100">
-                <path 
-                  d="M 20 100 A 80 80 0 0 1 180 100" 
-                  fill="none" 
-                  stroke="#0A2E1F" 
-                  strokeWidth="20" 
-                  strokeLinecap="round"
-                />
-             </svg>
-          </div>
-          
-          {/* Floating Icons */}
-          <div className="absolute top-1/4 left-1/4 w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 shadow-sm -rotate-12">
-            <Banknote size={16} />
-          </div>
-          <div className="absolute top-1/4 right-1/4 w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 shadow-sm rotate-12">
-            <ShoppingCart size={16} />
-          </div>
-          <div className="absolute top-1/2 left-8 w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 shadow-sm -rotate-6">
-            <CreditCard size={16} />
-          </div>
-          <div className="absolute top-1/2 right-8 w-8 h-8 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-600 shadow-sm rotate-6">
-            <Wallet size={16} />
-          </div>
+        {/* Illustration Section */}
+        <View style={tw`px-6 py-4 items-center text-center`}>
+          <View style={tw`w-full max-w-[240px] aspect-square items-center justify-center mb-6`}>
+            {/* Semi-circle Gauge Illustration */}
+            <View style={[tw`absolute inset-0 items-center justify-center`, { transform: [{ rotate: '180deg' }] }]}>
+               <Svg width="200" height="100" viewBox="0 0 200 100">
+                  <Path 
+                    d="M 20 100 A 80 80 0 0 1 180 100" 
+                    fill="none" 
+                    stroke="#0A2E1F" 
+                    strokeWidth="20" 
+                    strokeLinecap="round"
+                    opacity={0.1}
+                  />
+               </Svg>
+            </View>
+            
+            {/* Floating Icons */}
+            <View style={[tw`absolute top-1/4 left-1/4 w-8 h-8 bg-emerald-50 rounded-lg items-center justify-center shadow-sm`, { transform: [{ rotate: '-12deg' }] }]}>
+              <Banknote size={16} color="#059669" />
+            </View>
+            <View style={[tw`absolute top-1/4 right-1/4 w-8 h-8 bg-emerald-50 rounded-lg items-center justify-center shadow-sm`, { transform: [{ rotate: '12deg' }] }]}>
+              <ShoppingCart size={16} color="#059669" />
+            </View>
+            <View style={[tw`absolute top-1/2 left-8 w-8 h-8 bg-emerald-50 rounded-lg items-center justify-center shadow-sm`, { transform: [{ rotate: '-6deg' }] }]}>
+              <CreditCard size={16} color="#059669" />
+            </View>
+            <View style={[tw`absolute top-1/2 right-8 w-8 h-8 bg-emerald-50 rounded-lg items-center justify-center shadow-sm`, { transform: [{ rotate: '6deg' }] }]}>
+              <Wallet size={16} color="#059669" />
+            </View>
 
-          {/* Center Wallet Icon */}
-          <div className="relative z-10 w-20 h-20 bg-emerald-50 rounded-3xl flex items-center justify-center text-emerald-600 shadow-xl border-4 border-white">
-            <Wallet size={36} strokeWidth={1.5} />
-          </div>
-        </div>
+            {/* Center Wallet Icon */}
+            <View style={tw`relative z-10 w-20 h-20 bg-emerald-50 rounded-3xl items-center justify-center shadow-xl border-4 border-white`}>
+              <Wallet size={36} color="#059669" strokeWidth={1.5} />
+            </View>
+          </View>
 
-        <h2 className="text-xl font-bold text-[#0A2E1F] leading-tight mb-2 tracking-tight">
-          Save every month,<br />Plan your budget today
-        </h2>
-      </div>
+          <Text style={tw`text-xl font-bold text-[#0A2E1F] text-center leading-tight mb-2 tracking-tight`}>
+            Save every month,{"\n"}Plan your budget today
+          </Text>
+        </View>
 
-      {/* Input Section */}
-      <div className="px-6 space-y-5">
-        <div>
-          <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">My monthly budget</h3>
-          <div className="relative">
-            <div className="absolute top-2.5 left-4 text-[8px] font-bold text-slate-400 uppercase tracking-widest">
-              Enter Budget
-            </div>
-            <input 
-              type="text"
-              value={inputValue.startsWith('₹') ? inputValue : `₹${inputValue}`}
-              onChange={(e) => {
-                const val = e.target.value.replace(/[^0-9]/g, '');
-                setInputValue(val);
-              }}
-              className="w-full bg-white border border-slate-200 rounded-2xl px-4 pt-7 pb-3 text-xl font-bold text-slate-800 focus:border-[#0A2E1F] focus:outline-none transition-colors"
-            />
-          </div>
-        </div>
+        {/* Input Section */}
+        <View style={tw`px-6 gap-5`}>
+          <View>
+            <Text style={tw`text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3`}>My monthly budget</Text>
+            <View style={tw`relative`}>
+              <View style={tw`absolute top-2.5 left-4 z-10`}>
+                <Text style={tw`text-[8px] font-bold text-slate-400 uppercase tracking-widest`}>Enter Budget</Text>
+              </View>
+              <TextInput 
+                value={inputValue.startsWith('₹') ? inputValue : `₹${inputValue}`}
+                onChangeText={(val) => {
+                  const numericVal = val.replace(/[^0-9]/g, '');
+                  setInputValue(numericVal);
+                }}
+                keyboardType="numeric"
+                style={tw`w-full bg-white border border-slate-200 rounded-2xl px-4 pt-7 pb-3 text-xl font-bold text-slate-800`}
+              />
+            </View>
+          </View>
 
-        <p className="text-xs text-slate-500 leading-relaxed font-medium">
-          We'll calculate your 'Safe to Spend' from the amount you enter above by deducting your spend and upcoming bills. That way you know how much you can spend and still stay in budget.
-        </p>
+          <Text style={tw`text-xs text-slate-500 leading-relaxed font-medium`}>
+            We'll calculate your 'Safe to Spend' from the amount you enter above by deducting your spend and upcoming bills. That way you know how much you can spend and still stay in budget.
+          </Text>
 
-        <button 
-          onClick={handleSave}
-          className="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold text-sm shadow-xl shadow-indigo-600/20 active:scale-[0.98] transition-all uppercase tracking-widest"
-        >
-          Set now
-        </button>
+          <TouchableOpacity 
+            onPress={handleSave}
+            style={tw`w-full bg-[#0A2E1F] py-4 rounded-xl items-center shadow-xl shadow-emerald-900/20`}
+          >
+            <Text style={tw`text-white font-bold text-sm uppercase tracking-widest`}>Set now</Text>
+          </TouchableOpacity>
 
-        <p className="text-[10px] text-slate-400 text-center font-bold uppercase tracking-widest">
-          * Set budget to zero to disable
-        </p>
-      </div>
-    </motion.div>
+          <Text style={tw`text-[10px] text-slate-400 text-center font-bold uppercase tracking-widest`}>
+            * Set budget to zero to disable
+          </Text>
+        </View>
+      </ScrollView>
+    </View>
   );
 };

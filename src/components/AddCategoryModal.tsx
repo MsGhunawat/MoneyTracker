@@ -1,6 +1,7 @@
 import React from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { cn } from "../lib/utils";
+import { View, Text, TouchableOpacity, TextInput, Modal } from "react-native";
+import { MotiView, AnimatePresence } from "moti";
+import tw from "twrnc";
 
 interface AddCategoryModalProps {
   showAddCategoryModal: boolean;
@@ -24,65 +25,64 @@ export const AddCategoryModal: React.FC<AddCategoryModalProps> = ({
   handleAddCategory,
 }) => {
   return (
-    <AnimatePresence>
-      {showAddCategoryModal && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-sm">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl space-y-5"
-          >
-            <h3 className="text-lg font-bold text-slate-800 tracking-tight">Add Custom Category</h3>
-            
-            <div className="space-y-4">
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Category Name</label>
-                <input 
-                  type="text" 
-                  value={newCategoryName}
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                  placeholder="e.g. Gym" 
-                  className="w-full bg-transparent border-none p-0 font-bold text-slate-800 focus:ring-0 placeholder:text-slate-300 text-sm"
-                />
-              </div>
+    <Modal
+      visible={showAddCategoryModal}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setShowAddCategoryModal(false)}
+    >
+      <View style={tw`flex-1 justify-center items-center p-6 bg-black/60`}>
+        <MotiView 
+          from={{ opacity: 0, scale: 0.9, translateY: 20 }}
+          animate={{ opacity: 1, scale: 1, translateY: 0 }}
+          style={tw`bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl gap-5`}
+        >
+          <Text style={tw`text-lg font-bold text-slate-800 tracking-tight`}>Add Custom Category</Text>
+          
+          <View style={tw`gap-4`}>
+            <View style={tw`bg-slate-50 p-4 rounded-2xl border border-slate-100`}>
+              <Text style={tw`text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1`}>Category Name</Text>
+              <TextInput 
+                value={newCategoryName}
+                onChangeText={setNewCategoryName}
+                placeholder="e.g. Gym" 
+                placeholderTextColor="#CBD5E1"
+                style={tw`w-full p-0 font-bold text-slate-800 text-sm`}
+              />
+            </View>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block px-1">Select Icon</label>
-                <div className="grid grid-cols-4 gap-2">
-                  {availableIcons.map((item) => (
-                    <button 
-                      key={item.name}
-                      onClick={() => setSelectedIcon(item.name)}
-                      className={cn(
-                        "w-11 h-11 rounded-xl flex items-center justify-center transition-all",
-                        selectedIcon === item.name ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20" : "bg-slate-50 text-slate-400"
-                      )}
-                    >
-                      <item.icon size={18} />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <View style={tw`gap-2`}>
+              <Text style={tw`text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1`}>Select Icon</Text>
+              <View style={tw`flex-row flex-wrap gap-2`}>
+                {availableIcons.map((item) => (
+                  <TouchableOpacity 
+                    key={item.name}
+                    onPress={() => setSelectedIcon(item.name)}
+                    style={tw`w-11 h-11 rounded-xl items-center justify-center ${selectedIcon === item.name ? "bg-[#0A2E1F] shadow-lg" : "bg-slate-50"}`}
+                  >
+                    <item.icon size={18} color={selectedIcon === item.name ? "white" : "#94A3B8"} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
 
-            <div className="flex gap-3 pt-2">
-              <button 
-                onClick={() => setShowAddCategoryModal(false)}
-                className="flex-1 bg-slate-100 text-slate-600 py-3 rounded-xl font-bold text-xs uppercase tracking-widest active:scale-95 transition-all"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleAddCategory}
-                className="flex-1 bg-indigo-600 text-white py-3 rounded-xl font-bold text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
-              >
-                Add
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+          <View style={tw`flex-row gap-3 pt-2`}>
+            <TouchableOpacity 
+              onPress={() => setShowAddCategoryModal(false)}
+              style={tw`flex-1 bg-slate-100 py-3 rounded-xl items-center`}
+            >
+              <Text style={tw`text-slate-600 font-bold text-xs uppercase tracking-widest`}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={handleAddCategory}
+              style={tw`flex-1 bg-[#0A2E1F] py-3 rounded-xl items-center shadow-lg`}
+            >
+              <Text style={tw`text-white font-bold text-xs uppercase tracking-widest`}>Add</Text>
+            </TouchableOpacity>
+          </View>
+        </MotiView>
+      </View>
+    </Modal>
   );
 };

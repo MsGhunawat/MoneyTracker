@@ -3,11 +3,15 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from "react";
-import { AnimatePresence } from "motion/react";
-import { Layers } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { View, SafeAreaView, ScrollView, StatusBar } from "react-native";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { AnimatePresence, View as MotiView } from "moti";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Transaction, Bill, Account } from "./types";
-import { format, parse, subMonths, subYears, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
+import { format, subMonths, subYears, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
+import tw from "twrnc";
+import { requestSMSPermissions, syncRecentSMS, SyncRange } from "./services/smsService";
 
 // Components
 import { BottomNav } from "./components/BottomNav";
@@ -24,7 +28,12 @@ import { CategoryPicker } from "./components/CategoryPicker";
 import { AddCategoryModal } from "./components/AddCategoryModal";
 
 // Constants & Utils
-import { INITIAL_CATEGORIES, AVAILABLE_ICONS, ICON_MAP } from "./constants";
+import { 
+  MOCK_TRANSACTIONS, 
+  MOCK_BILLS, 
+  INITIAL_CATEGORIES, 
+  AVAILABLE_ICONS 
+} from "./constants";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "summary" | "transactionForm" | "bills" | "settings" | "transactions" | "categoryDetail" | "budget">("dashboard");
@@ -36,8 +45,8 @@ export default function App() {
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [showBalance, setShowBalance] = useState(false);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [bills, setBills] = useState<Bill[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
+  const [bills, setBills] = useState<Bill[]>(MOCK_BILLS);
   const [cashInHand, setCashInHand] = useState(4400); // Current month's cash
   const [showCarryForwardModal, setShowCarryForwardModal] = useState(false);
   const [pendingCarryForward, setPendingCarryForward] = useState(4500); // Mocked previous month balance
@@ -45,71 +54,7 @@ export default function App() {
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [selectedIcon, setSelectedIcon] = useState<string>("Layers");
-  const [csvImportError, setCsvImportError] = useState<string | null>(null);
-  const [importedFileName, setImportedFileName] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  // Persistence keys
-  const STORAGE_KEYS = {
-    transactions: 'moneytracker_transactions',
-    bills: 'moneytracker_bills',
-    categories: 'moneytracker_categories',
-    monthlyBudget: 'moneytracker_monthlyBudget',
-    cashInHand: 'moneytracker_cashInHand',
-    accounts: 'moneytracker_accounts'
-  };
-
-  // Load data from localStorage on mount
-  useEffect(() => {
-    try {
-      const savedTransactions = localStorage.getItem(STORAGE_KEYS.transactions);
-      if (savedTransactions) setTransactions(JSON.parse(savedTransactions));
-
-      const savedBills = localStorage.getItem(STORAGE_KEYS.bills);
-      if (savedBills) setBills(JSON.parse(savedBills));
-
-      const savedCategories = localStorage.getItem(STORAGE_KEYS.categories);
-      if (savedCategories) {
-        const parsed = JSON.parse(savedCategories);
-        setCategories(parsed.map((cat: any) => ({ ...cat, icon: ICON_MAP[cat.iconName] || Layers })));
-      }
-
-      const savedMonthlyBudget = localStorage.getItem(STORAGE_KEYS.monthlyBudget);
-      if (savedMonthlyBudget) setMonthlyBudget(Number(savedMonthlyBudget));
-
-      const savedCashInHand = localStorage.getItem(STORAGE_KEYS.cashInHand);
-      if (savedCashInHand) setCashInHand(Number(savedCashInHand));
-
-      const savedAccounts = localStorage.getItem(STORAGE_KEYS.accounts);
-      if (savedAccounts) {
-        // If we want to persist accounts, but for now, accounts are hardcoded
-        // setAccounts(JSON.parse(savedAccounts));
-      }
-    } catch (error) {
-      console.error('Error loading data from localStorage:', error);
-    }
-  }, []);
-
-  // Save data to localStorage when state changes
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.transactions, JSON.stringify(transactions));
-  }, [transactions]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.bills, JSON.stringify(bills));
-  }, [bills]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.categories, JSON.stringify(categories.map(cat => ({ ...cat, icon: undefined }))));
-  }, [categories]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.monthlyBudget, monthlyBudget.toString());
-  }, [monthlyBudget]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.cashInHand, cashInHand.toString());
-  }, [cashInHand]);
+  const [isSyncingSMS, setIsSyncingSMS] = useState(false);
 
   const [accounts] = useState<Account[]>([
     {
@@ -187,17 +132,55 @@ export default function App() {
   const [summaryView, setSummaryView] = useState<"overview" | "spendAreas">("overview");
 
   useEffect(() => {
-    // Simulate checking for new month and carry forward
-    const hasCheckedThisMonth = localStorage.getItem(`carry_forward_${format(new Date(), "yyyy-MM")}`);
-    if (!hasCheckedThisMonth && pendingCarryForward > 0) {
-      setShowCarryForwardModal(true);
-    }
+    const checkCarryForward = async () => {
+      const monthKey = `carry_forward_${format(new Date(), "yyyy-MM")}`;
+      const hasCheckedThisMonth = await AsyncStorage.getItem(monthKey);
+      if (!hasCheckedThisMonth && pendingCarryForward > 0) {
+        setShowCarryForwardModal(true);
+      }
+    };
+    checkCarryForward();
   }, [pendingCarryForward]);
 
-  const handleCarryForward = (confirm: boolean) => {
+  const handleSMSSync = async (range: SyncRange) => {
+    setIsSyncingSMS(true);
+    try {
+      const hasPermission = await requestSMSPermissions();
+      if (hasPermission) {
+        const extracted = await syncRecentSMS(range);
+        if (extracted.length > 0) {
+          const newTxs = extracted.map(ext => ({
+            ...ext,
+            id: `sms-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            paymentMethod: ext.paymentMethod || "upi",
+            isSpend: ext.isSpend ?? true,
+          } as Transaction));
+          
+          setTransactions(prev => {
+            // Filter out exact duplicates by description and amount on the same day
+            const uniqueNew = newTxs.filter(nt => 
+              !prev.some(pt => 
+                pt.description === nt.description && 
+                pt.amount === nt.amount && 
+                pt.date.split('T')[0] === nt.date.split('T')[0]
+              )
+            );
+            return [...uniqueNew, ...prev];
+          });
+          
+          alert(`Synced ${newTxs.length} transactions from your SMS messages!`);
+        }
+      }
+    } catch (error) {
+      console.error("SMS Sync Error:", error);
+    } finally {
+      setIsSyncingSMS(false);
+    }
+  };
+
+  const handleCarryForward = async (confirm: boolean) => {
     if (confirm) {
       setCashInHand(prev => prev + pendingCarryForward);
-      // Add a virtual transaction for carry forward
       const carryForwardTx: Transaction = {
         id: `cf-${Date.now()}`,
         amount: pendingCarryForward,
@@ -210,7 +193,6 @@ export default function App() {
       };
       setTransactions(prev => [carryForwardTx, ...prev]);
     } else {
-      // Mark as misc spend
       const miscSpendTx: Transaction = {
         id: `ms-${Date.now()}`,
         amount: pendingCarryForward,
@@ -223,117 +205,9 @@ export default function App() {
       };
       setTransactions(prev => [miscSpendTx, ...prev]);
     }
-    localStorage.setItem(`carry_forward_${format(new Date(), "yyyy-MM")}`, "true");
+    const monthKey = `carry_forward_${format(new Date(), "yyyy-MM")}`;
+    await AsyncStorage.setItem(monthKey, "true");
     setShowCarryForwardModal(false);
-  };
-
-  const parseCsvText = (csvText: string) => {
-    const rows: string[][] = [];
-    let currentRow: string[] = [];
-    let currentCell = "";
-    let inQuotes = false;
-
-    for (let i = 0; i < csvText.length; i += 1) {
-      const char = csvText[i];
-      const nextChar = csvText[i + 1];
-
-      if (inQuotes) {
-        if (char === '"' && nextChar === '"') {
-          currentCell += '"';
-          i += 1;
-        } else if (char === '"') {
-          inQuotes = false;
-        } else {
-          currentCell += char;
-        }
-      } else {
-        if (char === '"') {
-          inQuotes = true;
-        } else if (char === ',') {
-          currentRow.push(currentCell);
-          currentCell = "";
-        } else if (char === '\r') {
-          continue;
-        } else if (char === '\n') {
-          currentRow.push(currentCell);
-          rows.push(currentRow);
-          currentRow = [];
-          currentCell = "";
-        } else {
-          currentCell += char;
-        }
-      }
-    }
-
-    if (currentCell !== "" || currentRow.length > 0) {
-      currentRow.push(currentCell);
-      rows.push(currentRow);
-    }
-
-    return rows;
-  };
-
-  const parseCsvDate = (dateString: string) => {
-    const parsed = parse(dateString, "yyyy/MMM/dd HH:mm:ss", new Date());
-    return isNaN(parsed.getTime()) ? new Date(dateString) : parsed;
-  };
-
-  const mapPaymentMethod = (paymentType: string): Transaction["paymentMethod"] => {
-    const normalized = (paymentType || "").toLowerCase();
-    if (normalized.includes("cash")) return "cash";
-    if (normalized.includes("upi")) return "upi";
-    return "bank";
-  };
-
-  const importTransactionsFromCsv = async (file: File) => {
-    try {
-      const text = await file.text();
-      const rows = parseCsvText(text).filter(row => row.length > 1);
-      const headers = rows[0].map(header => header.trim());
-      const importedTransactions: Transaction[] = rows.slice(1).map((values, index) => {
-        const row = Object.fromEntries(headers.map((header, i) => [header, (values[i] ?? "").trim()]));
-        const credit = Number(row["Credit"] || 0);
-        const debit = Number(row["Debit"] || 0);
-        const amount = credit > 0 ? credit : debit > 0 ? debit : 0;
-        const type = (credit > 0 ? "income" : "expense") as "income" | "expense";
-        const rawDescription = row["Merchant/Receiver/Sender"] || row["Notes"] || row["Category"] || row["SubType"] || row["Txn Type"] || "";
-        const description = rawDescription.toString().toLowerCase() === "null" ? "" : rawDescription.toString();
-        const category = row["Category"] || row["Txn Type"] || (type === "income" ? "Income" : "Miscellaneous");
-        const paymentMethod = mapPaymentMethod(row["Payment Type"] || row["Account Type"] || "");
-        const date = parseCsvDate(row["Date"] || row["date"] || "");
-
-        return {
-          id: `csv-${index}-${date.getTime()}`,
-          amount,
-          description: description || category,
-          category,
-          date: date.toISOString(),
-          type,
-          paymentMethod,
-          isSpend: type === "expense"
-        };
-      }).filter(tx => tx.amount > 0 && tx.description);
-
-      setTransactions(importedTransactions);
-      setBills([]);
-      setImportedFileName(file.name);
-      setCsvImportError(null);
-      setActiveTab("dashboard");
-    } catch (error) {
-      console.error("CSV import failed:", error);
-      setCsvImportError("Failed to import CSV. Make sure the file is valid.");
-    }
-  };
-
-  const handleCsvFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    importTransactionsFromCsv(file);
-  };
-
-  const openCsvImportDialog = () => {
-    setCsvImportError(null);
-    fileInputRef.current?.click();
   };
 
   const handleTransactionClick = (tx: Transaction) => {
@@ -365,20 +239,10 @@ export default function App() {
     if (!editingTransaction) return;
     
     if (editingTransaction.id === "") {
-      // Adding new - ensure isSpend is properly set
-      const newTx = { 
-        ...editingTransaction, 
-        id: Date.now().toString(),
-        isSpend: editingTransaction.type === "expense" ? true : false
-      };
+      const newTx = { ...editingTransaction, id: Date.now().toString() };
       setTransactions(prev => [newTx, ...prev]);
     } else {
-      // Updating existing - ensure isSpend is properly set
-      const updatedTx = {
-        ...editingTransaction,
-        isSpend: editingTransaction.type === "expense" ? true : false
-      };
-      setTransactions(prev => prev.map(t => t.id === editingTransaction.id ? updatedTx : t));
+      setTransactions(prev => prev.map(t => t.id === editingTransaction.id ? editingTransaction : t));
     }
     
     setActiveTab(previousTab as any);
@@ -525,156 +389,204 @@ export default function App() {
   const selectedCategoryTotal = categoryTrendData.length > 0 ? categoryTrendData[categoryTrendData.length - 1].amount : 0;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-32">
-      <AnimatePresence mode="wait">
-        {activeTab === "dashboard" && (
-          <Dashboard 
-            totalMonthlySpend={totalMonthlySpend}
-            topSpendAreas={topSpendAreas}
-            transactions={transactions}
-            accounts={accounts}
-            cashInHand={cashInHand}
-            showBalance={showBalance}
-            setShowBalance={setShowBalance}
-            setActiveTab={setActiveTab}
-            setPreviousTab={setPreviousTab}
-            setSelectedCategory={setSelectedCategory}
-            setSummaryView={setSummaryView}
-            handleTransactionClick={handleTransactionClick}
-            openAddTransaction={openAddTransaction}
-            monthlyBudget={monthlyBudget}
-            categories={categories}
-          />
-        )}
+    <SafeAreaProvider>
+      <StatusBar barStyle="dark-content" />
+      <View style={tw`flex-1 bg-slate-50`}>
+        <SafeAreaView style={tw`flex-1`}>
+          <ScrollView contentContainerStyle={tw`pb-32`}>
+            <AnimatePresence exitBeforeEnter>
+              {activeTab === "dashboard" && (
+                <MotiView
+                  key="dashboard"
+                  from={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <Dashboard 
+                    totalMonthlySpend={totalMonthlySpend}
+                    topSpendAreas={topSpendAreas}
+                    transactions={transactions}
+                    accounts={accounts}
+                    cashInHand={cashInHand}
+                    showBalance={showBalance}
+                    setShowBalance={setShowBalance}
+                    setActiveTab={setActiveTab}
+                    setPreviousTab={setPreviousTab}
+                    setSelectedCategory={setSelectedCategory}
+                    setSummaryView={setSummaryView}
+                    handleTransactionClick={handleTransactionClick}
+                    openAddTransaction={openAddTransaction}
+                    handleSMSSync={handleSMSSync}
+                    isSyncingSMS={isSyncingSMS}
+                    monthlyBudget={monthlyBudget}
+                    categories={categories}
+                  />
+                </MotiView>
+              )}
 
-        {activeTab === "transactions" && (
-          <TransactionsView 
-            transactions={transactions}
-            totalMonthlySpend={totalMonthlySpend}
-            setActiveTab={setActiveTab}
-            handleTransactionClick={handleTransactionClick}
-            categories={categories}
-          />
-        )}
+              {activeTab === "transactions" && (
+                <MotiView
+                  key="transactions"
+                  from={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <TransactionsView 
+                    transactions={transactions}
+                    totalMonthlySpend={totalMonthlySpend}
+                    setActiveTab={setActiveTab}
+                    handleTransactionClick={handleTransactionClick}
+                    categories={categories}
+                  />
+                </MotiView>
+              )}
 
-        {activeTab === "summary" && (
-          <Summary 
-            summaryType={summaryType}
-            setSummaryType={setSummaryType}
-            summaryDate={summaryDate}
-            setSummaryDate={setSummaryDate}
-            summaryView={summaryView}
-            setSummaryView={setSummaryView}
-            trendData={trendData}
-            totalSummarySpend={totalSummarySpend}
-            summarySpendAreas={summarySpendAreas}
-            filteredTransactions={filteredTransactions}
-            setActiveTab={setActiveTab}
-            setPreviousTab={setPreviousTab}
-            setSelectedCategory={setSelectedCategory}
-            handleTransactionClick={handleTransactionClick}
-            openAddTransaction={openAddTransaction}
-            categories={categories}
-          />
-        )}
+              {activeTab === "summary" && (
+                <MotiView
+                  key="summary"
+                  from={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <Summary 
+                    summaryType={summaryType}
+                    setSummaryType={setSummaryType}
+                    summaryDate={summaryDate}
+                    setSummaryDate={setSummaryDate}
+                    summaryView={summaryView}
+                    setSummaryView={setSummaryView}
+                    trendData={trendData}
+                    totalSummarySpend={totalSummarySpend}
+                    summarySpendAreas={summarySpendAreas}
+                    filteredTransactions={filteredTransactions}
+                    setActiveTab={setActiveTab}
+                    setPreviousTab={setPreviousTab}
+                    setSelectedCategory={setSelectedCategory}
+                    handleTransactionClick={handleTransactionClick}
+                    openAddTransaction={openAddTransaction}
+                    categories={categories}
+                  />
+                </MotiView>
+              )}
 
-        {activeTab === "transactionForm" && editingTransaction && (
-          <TransactionForm 
-            editingTransaction={editingTransaction}
-            setEditingTransaction={setEditingTransaction}
-            setActiveTab={setActiveTab}
-            previousTab={previousTab}
-            setSelectedTransaction={setSelectedTransaction}
-            deleteTransaction={deleteTransaction}
-            saveTransaction={saveTransaction}
-            setShowCategoryPicker={setShowCategoryPicker}
-            categories={categories}
-            showAllCategories={showAllCategories}
-            setShowAllCategories={setShowAllCategories}
-            setShowAddCategoryModal={setShowAddCategoryModal}
-          />
-        )}
+              {activeTab === "transactionForm" && editingTransaction && (
+                <MotiView
+                  key="transactionForm"
+                  from={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <TransactionForm 
+                    editingTransaction={editingTransaction}
+                    setEditingTransaction={setEditingTransaction}
+                    setActiveTab={setActiveTab}
+                    previousTab={previousTab}
+                    setSelectedTransaction={setSelectedTransaction}
+                    deleteTransaction={deleteTransaction}
+                    saveTransaction={saveTransaction}
+                    setShowCategoryPicker={setShowCategoryPicker}
+                    categories={categories}
+                    showAllCategories={showAllCategories}
+                    setShowAllCategories={setShowAllCategories}
+                    setShowAddCategoryModal={setShowAddCategoryModal}
+                  />
+                </MotiView>
+              )}
 
-        {activeTab === "bills" && (
-          <BillsView bills={bills} />
-        )}
+              {activeTab === "bills" && (
+                <MotiView
+                  key="bills"
+                  from={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <BillsView bills={bills} />
+                </MotiView>
+              )}
 
-        {activeTab === "categoryDetail" && selectedCategory && (
-          <CategoryDetailView 
-            selectedCategory={selectedCategory}
-            categoryTrendData={categoryTrendData}
-            selectedCategoryTotal={selectedCategoryTotal}
-            categoryTransactions={categoryTransactions}
-            setActiveTab={setActiveTab}
-            previousTab={previousTab}
-            setSelectedCategory={setSelectedCategory}
-            handleTransactionClick={handleTransactionClick}
-            openAddTransaction={openAddTransaction}
-            categories={categories}
-          />
-        )}
+              {activeTab === "categoryDetail" && selectedCategory && (
+                <MotiView
+                  key="categoryDetail"
+                  from={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <CategoryDetailView 
+                    selectedCategory={selectedCategory}
+                    categoryTrendData={categoryTrendData}
+                    selectedCategoryTotal={selectedCategoryTotal}
+                    categoryTransactions={categoryTransactions}
+                    setActiveTab={setActiveTab}
+                    previousTab={previousTab}
+                    setSelectedCategory={setSelectedCategory}
+                    handleTransactionClick={handleTransactionClick}
+                    openAddTransaction={openAddTransaction}
+                    categories={categories}
+                  />
+                </MotiView>
+              )}
 
-        {activeTab === "settings" && (
-          <SettingsView 
-            onImportCsv={openCsvImportDialog}
-            importedFileName={importedFileName}
-          />
-        )}
+              {activeTab === "settings" && (
+                <MotiView
+                  key="settings"
+                  from={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <SettingsView />
+                </MotiView>
+              )}
 
-        {activeTab === "budget" && (
-          <BudgetView 
-            monthlyBudget={monthlyBudget}
-            setMonthlyBudget={setMonthlyBudget}
-            setActiveTab={setActiveTab}
-            previousTab={previousTab}
-          />
-        )}
-      </AnimatePresence>
+              {activeTab === "budget" && (
+                <MotiView
+                  key="budget"
+                  from={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <BudgetView 
+                    monthlyBudget={monthlyBudget}
+                    setMonthlyBudget={setMonthlyBudget}
+                    setActiveTab={setActiveTab}
+                    previousTab={previousTab}
+                  />
+                </MotiView>
+              )}
+            </AnimatePresence>
+          </ScrollView>
+        </SafeAreaView>
 
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".csv"
-        className="hidden"
-        onChange={handleCsvFileChange}
-      />
+        <BottomNav 
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          onAddClick={() => openAddTransaction()}
+        />
 
-      {csvImportError && (
-        <div className="mx-4 mb-4 rounded-3xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-800">
-          {csvImportError}
-        </div>
-      )}
+        <CarryForwardModal 
+          showCarryForwardModal={showCarryForwardModal}
+          pendingCarryForward={pendingCarryForward}
+          handleCarryForward={handleCarryForward}
+        />
 
-      <BottomNav 
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        onAddClick={() => openAddTransaction()}
-      />
+        <CategoryPicker 
+          showCategoryPicker={showCategoryPicker}
+          setShowCategoryPicker={setShowCategoryPicker}
+          categories={categories}
+          editingTransaction={editingTransaction}
+          setEditingTransaction={setEditingTransaction}
+        />
 
-      <CarryForwardModal 
-        showCarryForwardModal={showCarryForwardModal}
-        pendingCarryForward={pendingCarryForward}
-        handleCarryForward={handleCarryForward}
-      />
-
-      <CategoryPicker 
-        showCategoryPicker={showCategoryPicker}
-        setShowCategoryPicker={setShowCategoryPicker}
-        categories={categories}
-        editingTransaction={editingTransaction}
-        setEditingTransaction={setEditingTransaction}
-      />
-
-      <AddCategoryModal 
-        showAddCategoryModal={showAddCategoryModal}
-        setShowAddCategoryModal={setShowAddCategoryModal}
-        newCategoryName={newCategoryName}
-        setNewCategoryName={setNewCategoryName}
-        availableIcons={AVAILABLE_ICONS}
-        selectedIcon={selectedIcon}
-        setSelectedIcon={setSelectedIcon}
-        handleAddCategory={handleAddCategory}
-      />
-    </div>
+        <AddCategoryModal 
+          showAddCategoryModal={showAddCategoryModal}
+          setShowAddCategoryModal={setShowAddCategoryModal}
+          newCategoryName={newCategoryName}
+          setNewCategoryName={setNewCategoryName}
+          availableIcons={AVAILABLE_ICONS}
+          selectedIcon={selectedIcon}
+          setSelectedIcon={setSelectedIcon}
+          handleAddCategory={handleAddCategory}
+        />
+      </View>
+    </SafeAreaProvider>
   );
 }
