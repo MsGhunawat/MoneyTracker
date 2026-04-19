@@ -3,7 +3,7 @@
     "preview": {
       "android": {
         "buildType": "apk",
-        "image": "latest"
+        "image": "ubuntu-22.04-jdk-17-ndk-r26b"
       },
       "node": "20.10.0",
       "env": {
