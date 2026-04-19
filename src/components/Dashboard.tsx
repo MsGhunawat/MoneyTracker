@@ -113,7 +113,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           
           <View style={tw`flex-row justify-between items-center mb-6`}>
             <View>
-              <Text style={tw`text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1`}>SpendWise Premium</Text>
+              <Text style={tw`text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1`}>MoneyTracker Premium</Text>
               <Text style={tw`text-xl font-extrabold tracking-tight text-white`}>{format(new Date(), "MMMM yyyy")}</Text>
             </View>
             <View style={tw`flex-row items-center gap-3`}>

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "SpendWise",
-    "slug": "spendwise",
+    "name": "MoneyTracker",
+    "slug": "money-tracker",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
@@ -12,7 +12,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.mmg.spendwise",
+      "package": "com.mmg.moneytracker",
       "permissions": [
         "RECEIVE_SMS",
         "READ_SMS"
