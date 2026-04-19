@@ -5,13 +5,9 @@
   "build": {
     "preview": {
       "android": {
-        "buildType": "apk",
-        "image": "ubuntu-22.04-jdk-17-ndk-r26b"
+        "buildType": "apk"
       },
-      "node": "20.10.0",
-      "env": {
-        "JAVA_VERSION": "17"
-      }
+      "node": "20.10.0"
     },
     "production": {
       "android": {
