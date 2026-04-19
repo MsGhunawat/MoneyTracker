@@ -24,7 +24,7 @@ export async function requestSMSPermissions(): Promise<boolean> {
   if (Platform.OS !== 'android') return false;
 
   try {
-    const granted = await PermissionsAndroid.requestMulti([
+    const granted = await PermissionsAndroid.requestMultiple([
       PermissionsAndroid.PERMISSIONS.READ_SMS,
       PermissionsAndroid.PERMISSIONS.RECEIVE_SMS,
     ]);

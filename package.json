@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "npx expo start --web --port 3000 --non-interactive",
+    "dev": "npx expo start --web --port 3000",
     "build": "npx expo export",
     "lint": "tsc --noEmit"
   },
