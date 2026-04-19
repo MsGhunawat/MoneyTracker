@@ -222,11 +222,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </View>
 
             <View style={tw`flex-1 bg-white/5 border border-white/10 p-3 rounded-2xl`}>
-              <Text style={tw`text-[7px] font-bold text-white/40 uppercase tracking-widest mb-1.5`}>Total Spend</Text>
-              <Text style={tw`text-xs font-bold tracking-tight text-white`}>{formatCurrency(totalMonthlySpend)}</Text>
-            </View>
-
-            <View style={tw`flex-1 bg-white/5 border border-white/10 p-3 rounded-2xl`}>
               <View style={tw`flex-row items-center gap-1.5 mb-1.5`}>
                 <TrendingUp size={10} color="#818CF8" />
                 <Text style={tw`text-[7px] font-bold text-white/40 uppercase tracking-widest`}>Daily Insights</Text>
