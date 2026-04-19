@@ -45,7 +45,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange, on
 
   return (
     <View style={[
-      tw`absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-4 pt-3 pb-8 flex flex-row justify-between items-center z-40`,
+      tw`absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-4 pt-3 pb-6 flex flex-row justify-between items-center z-40`,
       { shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.05, shadowRadius: 20 }
     ]}>
       <NavButton id="dashboard" icon={LayoutDashboard} label="Home" />

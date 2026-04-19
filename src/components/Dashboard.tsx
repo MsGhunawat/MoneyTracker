@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, ScrollView, Modal, Dimensions } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Modal, Dimensions, Platform } from "react-native";
 import { MotiView, AnimatePresence, motify } from "moti";
 import { 
   Eye, 
@@ -102,8 +102,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <View style={tw`flex-1 bg-slate-50`}>
-      {/* Modern Professional Header */}
-      <View style={tw`bg-slate-900 rounded-b-[40px] shadow-2xl overflow-hidden`}>
+      <ScrollView contentContainerStyle={tw`pb-24`}>
+        {/* Modern Professional Header */}
+        <View style={tw`bg-slate-900 rounded-b-[40px] shadow-2xl overflow-hidden`}>
         <LinearGradient
           colors={['#0F172A', '#1E293B']}
           style={tw`p-6 pb-12`}
@@ -151,7 +152,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             >
               <View style={[tw`absolute inset-0 rounded-full`, { backgroundColor: totalMonthlySpend > budget ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.05)', filter: 'blur(20px)' }]} />
               
-              <Svg width="160" height="160" viewBox="0 0 224 224">
+              <Svg width="160" height="160" viewBox="0 0 224 224" pointerEvents="none" focusable={false}>
                 <Defs>
                   <SvgGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                     <Stop offset="0%" stopColor={totalMonthlySpend > budget ? "#EF4444" : "#10B981"} />
@@ -232,9 +233,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </LinearGradient>
       </View>
 
-      <ScrollView style={tw`flex-1 px-4 pt-8 pb-4`}>
+      <View style={tw`px-4 pt-4`}>
         {/* Latest Transactions */}
-        <View style={tw`mb-8`}>
+        <View style={tw`mb-5`}>
           <Text style={tw`text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3`}>Latest Transactions</Text>
           <View style={tw`bg-white rounded-3xl p-4 shadow-sm border border-slate-100`}>
             {transactions
@@ -271,10 +272,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </View>
 
         {/* Top Spend Areas */}
-        <View style={tw`mb-8`}>
+        <View style={tw`mb-5`}>
           <Text style={tw`text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3`}>Top Spend Areas</Text>
           <View style={tw`bg-white rounded-3xl p-5 shadow-sm border border-slate-100`}>
-            <View style={tw`h-48 w-full mb-6 items-center justify-center`}>
+            <View style={tw`h-36 w-full mb-4 items-center justify-center`} pointerEvents={Platform.OS === 'web' ? 'none' : 'auto'}>
               <PieChart
                 data={pieData}
                 donut
@@ -287,6 +288,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <Text style={tw`text-sm font-bold text-slate-800`}>{formatCurrency(totalMonthlySpend)}</Text>
                   </View>
                 )}
+                onPress={Platform.OS === 'web' ? undefined : () => {}}
               />
             </View>
 
@@ -333,7 +335,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </View>
 
         {/* Cash Wallet Section */}
-        <View style={tw`mb-8`}>
+        <View style={tw`mb-5`}>
           <Text style={tw`text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3`}>Cash Wallet</Text>
           <TouchableOpacity 
             onPress={() => setShowCashModal(true)}
@@ -374,7 +376,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </View>
 
         {/* My Accounts Section */}
-        <View style={tw`mb-20`}>
+        <View style={tw`mb-5`}>
           <View style={tw`flex-row justify-between items-center mb-3`}>
             <Text style={tw`text-[10px] font-bold text-slate-400 uppercase tracking-widest`}>My Accounts</Text>
             <Text style={tw`text-[10px] font-bold text-indigo-600 uppercase tracking-widest`}>View All</Text>
@@ -419,7 +421,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </TouchableOpacity>
           </View>
         </View>
-      </ScrollView>
+      </View>
 
       {/* Account Details Modal */}
       <Modal
@@ -636,6 +638,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </View>
         </View>
       </Modal>
+      </ScrollView>
     </View>
   );
 };

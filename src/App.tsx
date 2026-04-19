@@ -12,6 +12,8 @@ import { Transaction, Bill, Account } from "./types";
 import { format, subMonths, subYears, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
 import tw from "twrnc";
 import { requestSMSPermissions, syncRecentSMS, SyncRange } from "./services/smsService";
+import { AuthProvider } from "./contexts/AuthContext";
+import { AuthWrapper } from "./components/auth/AuthWrapper";
 
 // Components
 import { BottomNav } from "./components/BottomNav";
@@ -318,7 +320,7 @@ export default function App() {
           .filter(t => t.type === "expense" && t.isSpend !== false)
           .reduce((sum, t) => sum + t.amount, 0);
         return {
-          name: format(d, "MMM ''yy"),
+          name: format(d, "MMM"),
           amount,
           date: d
         };
@@ -389,204 +391,214 @@ export default function App() {
   const selectedCategoryTotal = categoryTrendData.length > 0 ? categoryTrendData[categoryTrendData.length - 1].amount : 0;
 
   return (
-    <SafeAreaProvider>
-      <StatusBar barStyle="dark-content" />
-      <View style={tw`flex-1 bg-slate-50`}>
-        <SafeAreaView style={tw`flex-1`}>
-          <ScrollView contentContainerStyle={tw`pb-32`}>
-            <AnimatePresence exitBeforeEnter>
-              {activeTab === "dashboard" && (
-                <MotiView
-                  key="dashboard"
-                  from={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <Dashboard 
-                    totalMonthlySpend={totalMonthlySpend}
-                    topSpendAreas={topSpendAreas}
-                    transactions={transactions}
-                    accounts={accounts}
-                    cashInHand={cashInHand}
-                    showBalance={showBalance}
-                    setShowBalance={setShowBalance}
-                    setActiveTab={setActiveTab}
-                    setPreviousTab={setPreviousTab}
-                    setSelectedCategory={setSelectedCategory}
-                    setSummaryView={setSummaryView}
-                    handleTransactionClick={handleTransactionClick}
-                    openAddTransaction={openAddTransaction}
-                    handleSMSSync={handleSMSSync}
-                    isSyncingSMS={isSyncingSMS}
-                    monthlyBudget={monthlyBudget}
-                    categories={categories}
-                  />
-                </MotiView>
-              )}
+    <AuthProvider>
+      <SafeAreaProvider>
+        <StatusBar barStyle="dark-content" />
+        <AuthWrapper>
+          <View style={tw`flex-1 bg-slate-50`}>
+            <SafeAreaView style={tw`flex-1`}>
+              <AnimatePresence exitBeforeEnter>
+                {activeTab === "dashboard" && (
+                  <MotiView
+                    key="dashboard"
+                    from={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    style={tw`flex-1`}
+                  >
+                    <Dashboard 
+                      totalMonthlySpend={totalMonthlySpend}
+                      topSpendAreas={topSpendAreas}
+                      transactions={transactions}
+                      accounts={accounts}
+                      cashInHand={cashInHand}
+                      showBalance={showBalance}
+                      setShowBalance={setShowBalance}
+                      setActiveTab={setActiveTab}
+                      setPreviousTab={setPreviousTab}
+                      setSelectedCategory={setSelectedCategory}
+                      setSummaryView={setSummaryView}
+                      handleTransactionClick={handleTransactionClick}
+                      openAddTransaction={openAddTransaction}
+                      handleSMSSync={handleSMSSync}
+                      isSyncingSMS={isSyncingSMS}
+                      monthlyBudget={monthlyBudget}
+                      categories={categories}
+                    />
+                  </MotiView>
+                )}
 
-              {activeTab === "transactions" && (
-                <MotiView
-                  key="transactions"
-                  from={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <TransactionsView 
-                    transactions={transactions}
-                    totalMonthlySpend={totalMonthlySpend}
-                    setActiveTab={setActiveTab}
-                    handleTransactionClick={handleTransactionClick}
-                    categories={categories}
-                  />
-                </MotiView>
-              )}
+                {activeTab === "transactions" && (
+                  <MotiView
+                    key="transactions"
+                    from={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    style={tw`flex-1`}
+                  >
+                    <TransactionsView 
+                      transactions={transactions}
+                      totalMonthlySpend={totalMonthlySpend}
+                      setActiveTab={setActiveTab}
+                      handleTransactionClick={handleTransactionClick}
+                      categories={categories}
+                    />
+                  </MotiView>
+                )}
 
-              {activeTab === "summary" && (
-                <MotiView
-                  key="summary"
-                  from={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <Summary 
-                    summaryType={summaryType}
-                    setSummaryType={setSummaryType}
-                    summaryDate={summaryDate}
-                    setSummaryDate={setSummaryDate}
-                    summaryView={summaryView}
-                    setSummaryView={setSummaryView}
-                    trendData={trendData}
-                    totalSummarySpend={totalSummarySpend}
-                    summarySpendAreas={summarySpendAreas}
-                    filteredTransactions={filteredTransactions}
-                    setActiveTab={setActiveTab}
-                    setPreviousTab={setPreviousTab}
-                    setSelectedCategory={setSelectedCategory}
-                    handleTransactionClick={handleTransactionClick}
-                    openAddTransaction={openAddTransaction}
-                    categories={categories}
-                  />
-                </MotiView>
-              )}
+                {activeTab === "summary" && (
+                  <MotiView
+                    key="summary"
+                    from={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    style={tw`flex-1`}
+                  >
+                    <Summary 
+                      summaryType={summaryType}
+                      setSummaryType={setSummaryType}
+                      summaryDate={summaryDate}
+                      setSummaryDate={setSummaryDate}
+                      summaryView={summaryView}
+                      setSummaryView={setSummaryView}
+                      trendData={trendData}
+                      totalSummarySpend={totalSummarySpend}
+                      summarySpendAreas={summarySpendAreas}
+                      filteredTransactions={filteredTransactions}
+                      setActiveTab={setActiveTab}
+                      setPreviousTab={setPreviousTab}
+                      setSelectedCategory={setSelectedCategory}
+                      handleTransactionClick={handleTransactionClick}
+                      openAddTransaction={openAddTransaction}
+                      categories={categories}
+                    />
+                  </MotiView>
+                )}
 
-              {activeTab === "transactionForm" && editingTransaction && (
-                <MotiView
-                  key="transactionForm"
-                  from={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <TransactionForm 
-                    editingTransaction={editingTransaction}
-                    setEditingTransaction={setEditingTransaction}
-                    setActiveTab={setActiveTab}
-                    previousTab={previousTab}
-                    setSelectedTransaction={setSelectedTransaction}
-                    deleteTransaction={deleteTransaction}
-                    saveTransaction={saveTransaction}
-                    setShowCategoryPicker={setShowCategoryPicker}
-                    categories={categories}
-                    showAllCategories={showAllCategories}
-                    setShowAllCategories={setShowAllCategories}
-                    setShowAddCategoryModal={setShowAddCategoryModal}
-                  />
-                </MotiView>
-              )}
+                {activeTab === "transactionForm" && editingTransaction && (
+                  <MotiView
+                    key="transactionForm"
+                    from={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    style={tw`flex-1`}
+                  >
+                    <TransactionForm 
+                      editingTransaction={editingTransaction}
+                      setEditingTransaction={setEditingTransaction}
+                      setActiveTab={setActiveTab}
+                      previousTab={previousTab}
+                      setSelectedTransaction={setSelectedTransaction}
+                      deleteTransaction={deleteTransaction}
+                      saveTransaction={saveTransaction}
+                      setShowCategoryPicker={setShowCategoryPicker}
+                      categories={categories}
+                      showAllCategories={showAllCategories}
+                      setShowAllCategories={setShowAllCategories}
+                      setShowAddCategoryModal={setShowAddCategoryModal}
+                    />
+                  </MotiView>
+                )}
 
-              {activeTab === "bills" && (
-                <MotiView
-                  key="bills"
-                  from={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <BillsView bills={bills} />
-                </MotiView>
-              )}
+                {activeTab === "bills" && (
+                  <MotiView
+                    key="bills"
+                    from={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    style={tw`flex-1`}
+                  >
+                    <BillsView bills={bills} />
+                  </MotiView>
+                )}
 
-              {activeTab === "categoryDetail" && selectedCategory && (
-                <MotiView
-                  key="categoryDetail"
-                  from={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <CategoryDetailView 
-                    selectedCategory={selectedCategory}
-                    categoryTrendData={categoryTrendData}
-                    selectedCategoryTotal={selectedCategoryTotal}
-                    categoryTransactions={categoryTransactions}
-                    setActiveTab={setActiveTab}
-                    previousTab={previousTab}
-                    setSelectedCategory={setSelectedCategory}
-                    handleTransactionClick={handleTransactionClick}
-                    openAddTransaction={openAddTransaction}
-                    categories={categories}
-                  />
-                </MotiView>
-              )}
+                {activeTab === "categoryDetail" && selectedCategory && (
+                  <MotiView
+                    key="categoryDetail"
+                    from={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    style={tw`flex-1`}
+                  >
+                    <CategoryDetailView 
+                      selectedCategory={selectedCategory}
+                      categoryTrendData={categoryTrendData}
+                      selectedCategoryTotal={selectedCategoryTotal}
+                      categoryTransactions={categoryTransactions}
+                      setActiveTab={setActiveTab}
+                      previousTab={previousTab}
+                      setSelectedCategory={setSelectedCategory}
+                      handleTransactionClick={handleTransactionClick}
+                      openAddTransaction={openAddTransaction}
+                      categories={categories}
+                    />
+                  </MotiView>
+                )}
 
-              {activeTab === "settings" && (
-                <MotiView
-                  key="settings"
-                  from={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <SettingsView />
-                </MotiView>
-              )}
+                {activeTab === "settings" && (
+                  <MotiView
+                    key="settings"
+                    from={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    style={tw`flex-1`}
+                  >
+                    <SettingsView />
+                  </MotiView>
+                )}
 
-              {activeTab === "budget" && (
-                <MotiView
-                  key="budget"
-                  from={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <BudgetView 
-                    monthlyBudget={monthlyBudget}
-                    setMonthlyBudget={setMonthlyBudget}
-                    setActiveTab={setActiveTab}
-                    previousTab={previousTab}
-                  />
-                </MotiView>
-              )}
-            </AnimatePresence>
-          </ScrollView>
-        </SafeAreaView>
+                {activeTab === "budget" && (
+                  <MotiView
+                    key="budget"
+                    from={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    style={tw`flex-1`}
+                  >
+                    <BudgetView 
+                      monthlyBudget={monthlyBudget}
+                      setMonthlyBudget={setMonthlyBudget}
+                      setActiveTab={setActiveTab}
+                      previousTab={previousTab}
+                    />
+                  </MotiView>
+                )}
+              </AnimatePresence>
+            </SafeAreaView>
 
-        <BottomNav 
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          onAddClick={() => openAddTransaction()}
-        />
+            <BottomNav 
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+              onAddClick={() => openAddTransaction()}
+            />
 
-        <CarryForwardModal 
-          showCarryForwardModal={showCarryForwardModal}
-          pendingCarryForward={pendingCarryForward}
-          handleCarryForward={handleCarryForward}
-        />
+            <CarryForwardModal 
+              showCarryForwardModal={showCarryForwardModal}
+              pendingCarryForward={pendingCarryForward}
+              handleCarryForward={handleCarryForward}
+            />
 
-        <CategoryPicker 
-          showCategoryPicker={showCategoryPicker}
-          setShowCategoryPicker={setShowCategoryPicker}
-          categories={categories}
-          editingTransaction={editingTransaction}
-          setEditingTransaction={setEditingTransaction}
-        />
+            <CategoryPicker 
+              showCategoryPicker={showCategoryPicker}
+              setShowCategoryPicker={setShowCategoryPicker}
+              categories={categories}
+              editingTransaction={editingTransaction}
+              setEditingTransaction={setEditingTransaction}
+            />
 
-        <AddCategoryModal 
-          showAddCategoryModal={showAddCategoryModal}
-          setShowAddCategoryModal={setShowAddCategoryModal}
-          newCategoryName={newCategoryName}
-          setNewCategoryName={setNewCategoryName}
-          availableIcons={AVAILABLE_ICONS}
-          selectedIcon={selectedIcon}
-          setSelectedIcon={setSelectedIcon}
-          handleAddCategory={handleAddCategory}
-        />
-      </View>
-    </SafeAreaProvider>
+            <AddCategoryModal 
+              showAddCategoryModal={showAddCategoryModal}
+              setShowAddCategoryModal={setShowAddCategoryModal}
+              newCategoryName={newCategoryName}
+              setNewCategoryName={setNewCategoryName}
+              availableIcons={AVAILABLE_ICONS}
+              selectedIcon={selectedIcon}
+              setSelectedIcon={setSelectedIcon}
+              handleAddCategory={handleAddCategory}
+            />
+          </View>
+        </AuthWrapper>
+      </SafeAreaProvider>
+    </AuthProvider>
   );
 }

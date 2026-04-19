@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Dimensions, Platform } from "react-native";
 import { MotiView, AnimatePresence } from "moti";
 import { 
   ArrowLeft, 
@@ -8,10 +8,11 @@ import {
   TrendingUp, 
   Layers, 
   Calendar,
-  Plus
+  Plus,
+  ArrowUpRight
 } from "lucide-react-native";
 import { format, subMonths, subYears, addMonths, addYears, parseISO } from "date-fns";
-import { BarChart, PieChart } from "react-native-gifted-charts";
+import { BarChart, PieChart, LineChart } from "react-native-gifted-charts";
 import Svg, { Circle } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
 import tw from "twrnc";
@@ -57,6 +58,9 @@ export const Summary: React.FC<SummaryProps> = ({
   openAddTransaction,
   categories,
 }) => {
+  const screenWidth = Dimensions.get('window').width;
+  const chartWidth = screenWidth - 80;
+
   const barData = trendData.map(entry => {
     const isSelected = summaryType === 'monthly' 
       ? format(entry.date, 'yyyy-MM') === format(summaryDate, 'yyyy-MM')
@@ -65,7 +69,8 @@ export const Summary: React.FC<SummaryProps> = ({
       value: entry.amount,
       label: entry.name,
       frontColor: isSelected ? "#6366F1" : "#E2E8F0",
-      onPress: () => setSummaryDate(entry.date)
+      dataPointColor: isSelected ? "#6366F1" : "#94A3B8",
+      onPress: Platform.OS === 'web' ? undefined : () => setSummaryDate(entry.date)
     };
   });
 
@@ -159,23 +164,50 @@ export const Summary: React.FC<SummaryProps> = ({
               </TouchableOpacity>
             </View>
 
-            <View style={tw`bg-white rounded-3xl p-5 shadow-sm border border-slate-100`}>
-              <View style={tw`flex-row items-center gap-2 mb-6`}>
-                <TrendingUp size={14} color="#4F46E5" />
-                <Text style={tw`text-[10px] font-bold text-slate-400 uppercase tracking-widest`}>Spend Trend</Text>
+             <View style={tw`bg-white rounded-3xl p-5 shadow-sm border border-slate-100`}>
+              <View style={tw`flex-row items-center justify-between mb-6`}>
+                <View style={tw`flex-row items-center gap-2`}>
+                  <View style={tw`p-1.5 bg-indigo-50 rounded-lg`}>
+                    <TrendingUp size={12} color="#4F46E5" />
+                  </View>
+                  <Text style={tw`text-[10px] font-bold text-slate-400 uppercase tracking-widest`}>Spend Trend</Text>
+                </View>
+                <View style={tw`flex-row items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-full`}>
+                   <ArrowUpRight size={10} color="#10B981" />
+                   <Text style={tw`text-[8px] font-bold text-emerald-600`}>+12.5%</Text>
+                </View>
               </View>
-              <View style={tw`h-40 w-full`}>
-                <BarChart
+              <View style={tw`h-44 w-full`}>
+                <LineChart
                   data={barData}
-                  barWidth={20}
+                  width={chartWidth}
+                  height={150}
                   noOfSections={3}
-                  barBorderRadius={4}
-                  frontColor="#E2E8F0"
+                  spacing={chartWidth / 6.5}
+                  initialSpacing={15}
+                  color="#6366F1"
+                  thickness={3}
+                  startFillColor="rgba(99, 102, 241, 0.2)"
+                  endFillColor="rgba(99, 102, 241, 0.01)"
+                  startOpacity={0.4}
+                  endOpacity={0.1}
+                  curved
+                  hideRules
                   yAxisThickness={0}
                   xAxisThickness={0}
-                  hideRules
                   yAxisTextStyle={tw`text-[8px] font-bold text-slate-400`}
                   xAxisLabelTextStyle={tw`text-[8px] font-bold text-slate-400`}
+                  pointerConfig={Platform.OS === 'web' ? undefined : {
+                    pointerStripColor: '#6366F1',
+                    pointerStripWidth: 2,
+                    pointerColor: '#6366F1',
+                    radius: 4,
+                    pointerLabelComponent: (items: any) => (
+                      <View style={tw`bg-slate-900 px-2 py-1 rounded-lg -ml-4`}>
+                        <Text style={tw`text-white text-[8px] font-bold`}>{items[0].value ? `₹${items[0].value.toLocaleString()}` : '₹0'}</Text>
+                      </View>
+                    ),
+                  }}
                 />
               </View>
             </View>
@@ -183,17 +215,19 @@ export const Summary: React.FC<SummaryProps> = ({
         )}
 
         <View style={tw`bg-white rounded-3xl p-6 shadow-sm border border-slate-100 mb-6`}>
-          <View style={tw`h-56 w-full items-center justify-center relative`}>
-            <View style={tw`absolute inset-0 items-center justify-center z-10`}>
+            <View style={tw`h-64 w-full items-center justify-center relative`} pointerEvents="none">
+            <View style={tw`absolute inset-0 items-center justify-center z-10`} pointerEvents="none">
               <Text style={tw`text-slate-400 text-[10px] font-bold uppercase tracking-widest`}>Total Spend</Text>
               <Text style={tw`text-2xl font-extrabold text-slate-800 tracking-tight`}>{formatCurrency(totalSummarySpend)}</Text>
             </View>
             <PieChart
               data={pieData}
               donut
-              radius={85}
-              innerRadius={65}
+              radius={90}
+              innerRadius={70}
               innerCircleColor={'white'}
+              centerLabelComponent={() => null}
+              onPress={Platform.OS === 'web' ? undefined : () => {}}
             />
           </View>
         </View>
@@ -216,10 +250,16 @@ export const Summary: React.FC<SummaryProps> = ({
                 style={tw`p-4 flex-row items-center gap-3 ${idx !== summarySpendAreas.length - 1 ? "border-b border-slate-50" : ""}`}
               >
                 <View style={tw`relative w-10 h-10 items-center justify-center`}>
-                  <Svg style={[tw`absolute inset-0`, { transform: [{ rotate: '-90deg' }] }]} width="40" height="40">
+                  <Svg 
+                    pointerEvents="none"
+                    focusable={false}
+                    style={[tw`absolute inset-0`, { transform: [{ rotate: '-90deg' }] }]} 
+                    width="40" height="40"
+                  >
                     <Circle 
                       cx="20" cy="20" r={radius} 
                       fill="none" stroke="#F1F5F9" strokeWidth="3" 
+                      pointerEvents="none"
                     />
                     <Circle 
                       cx="20" cy="20" r={radius} 
@@ -229,6 +269,7 @@ export const Summary: React.FC<SummaryProps> = ({
                       strokeDasharray={circumference}
                       strokeDashoffset={strokeDashoffset}
                       strokeLinecap="round"
+                      pointerEvents="none"
                     />
                   </Svg>
                   <View style={tw`relative z-10`}>
