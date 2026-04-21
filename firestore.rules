@@ -18,54 +18,100 @@ service cloud.firestore {
     function isValidId(id) {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
+    
+    function incoming() {
+      return request.resource.data;
+    }
+    
+    function existing() {
+      return resource.data;
+    }
 
     // User Profile Rules
     match /users/{userId} {
+      // Apply ID hardening to path variable
+      allow get, create, update: if isValidId(userId);
+
       function isValidUser(data) {
-        return data.size() >= 2 &&
+        return data.keys().hasAll(['uid', 'email', 'displayName']) &&
                data.uid == request.auth.uid &&
                data.email is string &&
+               data.email.size() <= 256 &&
                data.displayName is string &&
-               data.displayName.size() <= 100;
+               data.displayName.size() <= 100 &&
+               (!('monthlyBudget' in data) || data.monthlyBudget is number) &&
+               (!('cashInHand' in data) || data.cashInHand is number);
       }
 
       allow get: if isOwner(userId);
-      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      
+      allow create: if isOwner(userId) && 
+                      isValidUser(incoming()) &&
+                      incoming().keys().size() >= 3;
+      
       allow update: if isOwner(userId) && 
-                      isValidUser(request.resource.data) &&
-                      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'monthlyBudget', 'cashInHand']);
+                      isValidUser(incoming()) &&
+                      incoming().uid == existing().uid && // Immutable ID
+                      incoming().email == existing().email && // Immutable Email
+                      incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'monthlyBudget', 'cashInHand']);
       
       // Transactions Subcollection
       match /transactions/{transactionId} {
+        // Apply ID hardening
+        allow get, create, update, delete: if isValidId(transactionId);
+
         function isValidTransaction(data) {
-          return data.amount is number &&
+          return data.keys().hasAll(['amount', 'category', 'description', 'date', 'type']) &&
+                 data.amount is number &&
+                 data.amount >= 0 &&
                  data.category is string &&
+                 data.category.size() <= 50 &&
                  data.description is string &&
-                 data.description.size() <= 500 &&
+                 data.description.size() <= 200 &&
                  data.date is string &&
-                 data.type in ['income', 'expense'];
+                 data.type in ['income', 'expense'] &&
+                 (!('paymentMethod' in data) || data.paymentMethod is string) &&
+                 (!('isSpend' in data) || data.isSpend is bool);
         }
 
         allow list: if isOwner(userId);
         allow get: if isOwner(userId);
-        allow create: if isOwner(userId) && isValidTransaction(request.resource.data);
-        allow update: if isOwner(userId) && isValidTransaction(request.resource.data);
+        
+        allow create: if isOwner(userId) && 
+                        isValidTransaction(incoming());
+        
+        allow update: if isOwner(userId) && 
+                        isValidTransaction(incoming()) &&
+                        incoming().diff(existing()).affectedKeys().hasOnly(['amount', 'category', 'description', 'date', 'type', 'paymentMethod', 'isSpend', 'note', 'billImage']);
+        
         allow delete: if isOwner(userId);
       }
 
       // Accounts Subcollection
       match /accounts/{accountId} {
+        // Apply ID hardening
+        allow get, create, update, delete: if isValidId(accountId);
+
         function isValidAccount(data) {
-          return data.name is string &&
+          return data.keys().hasAll(['name', 'amount', 'type']) &&
+                 data.name is string &&
                  data.name.size() <= 100 &&
                  data.amount is number &&
-                 data.type in ['bank', 'credit_card'];
+                 data.type in ['bank', 'credit_card'] &&
+                 (!('number' in data) || data.number is string) &&
+                 (!('isEstimated' in data) || data.isEstimated is bool);
         }
 
         allow list: if isOwner(userId);
         allow get: if isOwner(userId);
-        allow create: if isOwner(userId) && isValidAccount(request.resource.data);
-        allow update: if isOwner(userId) && isValidAccount(request.resource.data);
+        
+        allow create: if isOwner(userId) && 
+                        isValidAccount(incoming());
+        
+        allow update: if isOwner(userId) && 
+                        isValidAccount(incoming()) &&
+                        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'amount', 'type', 'number', 'isEstimated', 'updatedAt']);
+        
         allow delete: if isOwner(userId);
       }
     }

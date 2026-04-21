@@ -5,14 +5,15 @@ import { Receipt, Calendar, Plus } from "lucide-react-native";
 import { format, parseISO } from "date-fns";
 import { LinearGradient } from "expo-linear-gradient";
 import tw from "twrnc";
-import { Bill } from "../types";
+import { Bill, Currency } from "../types";
 import { formatCurrency } from "../utils";
 
 interface BillsViewProps {
   bills: Bill[];
+  currency: Currency;
 }
 
-export const BillsView: React.FC<BillsViewProps> = ({ bills }) => {
+export const BillsView: React.FC<BillsViewProps> = ({ bills, currency }) => {
   return (
     <View style={tw`flex-1 bg-slate-50`}>
       <ScrollView contentContainerStyle={tw`px-4 py-6 pb-32`}>
@@ -31,7 +32,7 @@ export const BillsView: React.FC<BillsViewProps> = ({ bills }) => {
                 </View>
                 <Text style={tw`text-slate-400 text-[10px] font-bold uppercase tracking-widest opacity-80`}>Total Unpaid Bills</Text>
               </View>
-              <Text style={tw`text-3xl font-extrabold tracking-tight text-white mb-6`}>{formatCurrency(bills.reduce((sum, b) => sum + b.amount, 0))}</Text>
+              <Text style={tw`text-3xl font-extrabold tracking-tight text-white mb-6`}>{formatCurrency(bills.reduce((sum, b) => sum + b.amount, 0), currency)}</Text>
               
               <View style={tw`flex-row gap-2`}>
                 <View style={tw`bg-white/5 border border-white/10 px-4 py-2.5 rounded-xl flex-1`}>
@@ -64,7 +65,7 @@ export const BillsView: React.FC<BillsViewProps> = ({ bills }) => {
                   </View>
                 </View>
                 <View style={tw`items-end`}>
-                  <Text style={tw`font-bold text-slate-800 text-sm`}>{formatCurrency(bill.amount)}</Text>
+                  <Text style={tw`font-bold text-slate-800 text-sm`}>{formatCurrency(bill.amount, currency)}</Text>
                   <TouchableOpacity style={tw`mt-1.5 bg-indigo-50 px-3 py-1 rounded-lg`}>
                     <Text style={tw`text-[8px] font-bold text-indigo-600 uppercase tracking-widest`}>Pay</Text>
                   </TouchableOpacity>

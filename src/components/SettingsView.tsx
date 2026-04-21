@@ -206,7 +206,7 @@ export const SettingsView: React.FC<{ currency: Currency, setCurrency: (c: Curre
               rightElement={
                 <Switch 
                   value={darkMode} 
-                  onValueChange={setDarkMode}
+                  onValueChange={() => Alert.alert("Coming Soon", "Dark Appearance feature is currently being refined and will be available in the next update.")}
                   trackColor={{ false: "#E2E8F0", true: "#475569" }}
                   thumbColor="white"
                 />

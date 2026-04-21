@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, TouchableOpacity, ScrollView, Modal, Dimensions, Platform } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Modal, Dimensions, Platform, TextInput } from "react-native";
 import { MotiView, AnimatePresence, motify } from "moti";
 import { 
   Eye, 
@@ -17,7 +17,7 @@ import {
   MessageSquare,
   Calendar
 } from "lucide-react-native";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, differenceInDays, endOfMonth, getDate } from "date-fns";
 import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop } from "react-native-svg";
 import { LineChart, PieChart } from "react-native-gifted-charts";
 import { LinearGradient } from "expo-linear-gradient";
@@ -52,6 +52,7 @@ interface DashboardProps {
   cashInHand: number;
   categories: any[];
   currency: Currency;
+  updateCashInHand?: (value: number) => Promise<void>;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -73,12 +74,36 @@ export const Dashboard: React.FC<DashboardProps> = ({
   cashInHand,
   categories,
   currency,
+  updateCashInHand
 }) => {
   const budget = monthlyBudget || 35000;
   const [showAccountModal, setShowAccountModal] = React.useState(false);
   const [showCashModal, setShowCashModal] = React.useState(false);
   const [showSyncModal, setShowSyncModal] = React.useState(false);
   const [accountModalType, setAccountModalType] = React.useState<"bank" | "credit_card">("bank");
+  const [isEditingCash, setIsEditingCash] = React.useState(false);
+  const [cashInputValue, setCashInputValue] = React.useState(cashInHand.toString());
+
+  // Dynamic Cash Calculations
+  const cashTransactions = transactions.filter(t => t.paymentMethod === 'cash');
+  const totalCashIncome = cashTransactions
+    .filter(t => t.type === 'income')
+    .reduce((sum, t) => sum + t.amount, 0);
+  const totalCashExpense = cashTransactions
+    .filter(t => t.type === 'expense')
+    .reduce((sum, t) => sum + t.amount, 0);
+
+  const handleSaveCash = async () => {
+    const val = parseFloat(cashInputValue);
+    if (!isNaN(val) && updateCashInHand) {
+      await updateCashInHand(val);
+      setIsEditingCash(false);
+    }
+  };
+
+  React.useEffect(() => {
+    setCashInputValue(cashInHand.toString());
+  }, [cashInHand]);
   
   const sparklineData = [
     { value: 1200 },
@@ -99,7 +124,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     };
   });
 
-  const arcLength = 393.75; 
+  const arcLength = 440; 
   const progress = Math.min(totalMonthlySpend / budget, 1);
 
   return (
@@ -176,7 +201,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   stroke="url(#gaugeGradient)" 
                   strokeWidth="16" 
                   strokeLinecap="round"
-                  strokeDasharray={arcLength}
+                  strokeDasharray={`${arcLength} ${arcLength}`}
                   strokeDashoffset={arcLength * (1 - progress)}
                 />
               </Svg>
@@ -191,7 +216,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     : formatCurrency(budget - totalMonthlySpend, currency)}
                 </Text>
                 <View style={tw`mt-1 px-2 py-0.5 bg-white/10 rounded-full`}>
-                  <Text style={tw`text-[7px] font-bold text-white/70`}>24 days left</Text>
+                  <Text style={tw`text-[7px] font-bold text-white/70`}>{differenceInDays(endOfMonth(new Date()), new Date())} days left</Text>
                 </View>
               </View>
             </TouchableOpacity>
@@ -220,7 +245,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </TouchableOpacity>
               </View>
               <Text style={tw`text-xs font-bold tracking-tight text-white`}>
-                {showBalance ? formatCurrency(45230, currency) : `${currency.symbol}XX,XXX`}
+                {showBalance ? formatCurrency(accounts.reduce((sum, a) => sum + a.amount, 0), currency) : `${currency.symbol}XX,XXX`}
               </Text>
             </View>
 
@@ -229,7 +254,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <TrendingUp size={10} color="#818CF8" />
                 <Text style={tw`text-[7px] font-bold text-white/40 uppercase tracking-widest`}>Daily Insights</Text>
               </View>
-              <Text style={tw`text-xs font-bold tracking-tight text-white`}>{formatCurrency(totalMonthlySpend / 30, currency)}</Text>
+              <Text style={tw`text-xs font-bold tracking-tight text-white`}>{formatCurrency(totalMonthlySpend / getDate(new Date()), currency)}</Text>
             </View>
           </View>
         </LinearGradient>
@@ -360,18 +385,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
             </View>
             
             <View style={tw`w-full h-1.5 bg-slate-100 rounded-full overflow-hidden flex-row mb-3`}>
-              <View style={[tw`h-full bg-emerald-500`, { width: '15%' }]} />
-              <View style={tw`flex-1 bg-red-400`} />
+              <View style={[tw`h-full bg-emerald-500`, { width: totalCashIncome + totalCashExpense > 0 ? `${(totalCashIncome / (totalCashIncome + totalCashExpense)) * 100}%` : '0%' }]} />
+              <View style={[tw`h-full bg-red-400`, { width: totalCashIncome + totalCashExpense > 0 ? `${(totalCashExpense / (totalCashIncome + totalCashExpense)) * 100}%` : '0%' }]} />
             </View>
             
             <View style={tw`flex-row justify-between items-center`}>
               <View>
-                <Text style={tw`text-[10px] font-bold text-slate-800`}>{formatCurrency(24356, currency)}</Text>
-                <Text style={tw`text-[8px] text-slate-400 font-bold uppercase tracking-widest`}>Spend</Text>
+                <Text style={tw`text-[10px] font-bold text-slate-800`}>{formatCurrency(totalCashExpense, currency)}</Text>
+                <Text style={tw`text-[8px] text-slate-400 font-bold uppercase tracking-widest`}>Spent</Text>
               </View>
               <View style={tw`items-end`}>
-                <Text style={tw`text-[10px] font-bold text-slate-800`}>{formatCurrency(28756, currency)}</Text>
-                <Text style={tw`text-[8px] text-slate-400 font-bold uppercase tracking-widest`}>Withdrawn</Text>
+                <Text style={tw`text-[10px] font-bold text-slate-800`}>{formatCurrency(totalCashIncome, currency)}</Text>
+                <Text style={tw`text-[8px] text-slate-400 font-bold uppercase tracking-widest`}>Total In</Text>
               </View>
             </View>
           </TouchableOpacity>
@@ -523,31 +548,58 @@ export const Dashboard: React.FC<DashboardProps> = ({
               style={tw`p-6 pb-8`}
             >
               <View style={tw`flex-row justify-between items-center mb-8`}>
-                <TouchableOpacity onPress={() => setShowCashModal(false)} style={tw`w-10 h-10 rounded-full bg-white/10 items-center justify-center`}>
+                <TouchableOpacity onPress={() => {
+                  setShowCashModal(false);
+                  setIsEditingCash(false);
+                }} style={tw`w-10 h-10 rounded-full bg-white/10 items-center justify-center`}>
                   <ArrowLeft size={20} color="white" />
                 </TouchableOpacity>
-                <TouchableOpacity style={tw`w-10 h-10 rounded-full bg-white/10 items-center justify-center`}>
+                <TouchableOpacity 
+                   onPress={() => setIsEditingCash(!isEditingCash)}
+                   style={tw`w-10 h-10 rounded-full ${isEditingCash ? 'bg-emerald-500' : 'bg-white/10'} items-center justify-center`}
+                >
                   <Edit2 size={18} color="white" />
                 </TouchableOpacity>
               </View>
               
               <Text style={tw`text-slate-300 text-xs font-bold uppercase tracking-widest mb-1`}>Cash Wallet Balance</Text>
               <Text style={tw`text-[10px] text-slate-400 font-bold mb-4`}>
-                Current Month
+                Current Balance
               </Text>
-              <Text style={tw`text-4xl font-black text-white tracking-tighter`}>
-                {formatCurrency(cashInHand, currency)}
-              </Text>
+              
+              {isEditingCash ? (
+                <View style={tw`flex-row items-center gap-3`}>
+                  <View style={tw`flex-1 bg-white/10 rounded-2xl px-4 py-3 border border-white/20`}>
+                    <TextInput 
+                      value={cashInputValue}
+                      onChangeText={setCashInputValue}
+                      keyboardType="numeric"
+                      style={tw`text-2xl font-black text-white`}
+                      autoFocus
+                    />
+                  </View>
+                  <TouchableOpacity 
+                    onPress={handleSaveCash}
+                    style={tw`bg-emerald-500 p-4 rounded-2xl`}
+                  >
+                    <Plus size={20} color="white" strokeWidth={3} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <Text style={tw`text-4xl font-black text-white tracking-tighter`}>
+                  {formatCurrency(cashInHand, currency)}
+                </Text>
+              )}
             </LinearGradient>
 
-            <View style={tw`bg-white/5 px-6 py-4 border-b border-white/5 flex-row gap-4 bg-slate-900`}>
+            <View style={tw`bg-white/5 px-6 py-4 border-b border-white/5 flex-row gap-4 bg-slate-900 shadow-lg`}>
               <View style={tw`flex-1`}>
-                <Text style={tw`text-[8px] font-bold text-white/40 uppercase tracking-widest mb-1`}>Total Withdrawn</Text>
-                <Text style={tw`text-lg font-bold text-white`}>{formatCurrency(28756, currency)}</Text>
+                <Text style={tw`text-[8px] font-bold text-white/40 uppercase tracking-widest mb-1`}>Total In (Cash)</Text>
+                <Text style={tw`text-lg font-bold text-white`}>{formatCurrency(totalCashIncome, currency)}</Text>
               </View>
               <View style={tw`flex-1`}>
-                <Text style={tw`text-[8px] font-bold text-white/40 uppercase tracking-widest mb-1`}>Total Spent</Text>
-                <Text style={tw`text-lg font-bold text-white`}>{formatCurrency(24356, currency)}</Text>
+                <Text style={tw`text-[8px] font-bold text-white/40 uppercase tracking-widest mb-1`}>Total Out (Cash)</Text>
+                <Text style={tw`text-lg font-bold text-white`}>{formatCurrency(totalCashExpense, currency)}</Text>
               </View>
             </View>
 

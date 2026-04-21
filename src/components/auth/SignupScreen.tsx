@@ -85,16 +85,22 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ onSwitchToLogin }) =
       });
 
     } catch (error: any) {
-      console.error(error);
-      let message = "An error occurred during signup";
+      console.error("Signup Error:", error);
+      let message = error.message || "An error occurred during signup";
+      
       if (error.code === "auth/email-already-in-use") {
         message = "This email is already registered";
       } else if (error.code === "auth/invalid-email") {
         message = "Invalid email format";
       } else if (error.code === "auth/weak-password") {
         message = "Password is too weak";
+      } else if (error.code === "auth/network-request-failed") {
+        message = "Network error. Please check your connection.";
+      } else if (error.code === "auth/operation-not-allowed") {
+        message = "Signup is currently disabled. Please check Firebase console.";
       }
-      setError(message);
+      
+      setError(`${message} (${error.code || 'unknown'})`);
     } finally {
       setLoading(false);
     }
@@ -122,9 +128,9 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({ onSwitchToLogin }) =
         });
       }
     } catch (error: any) {
-      console.error(error);
+      console.error("Google Signup Error:", error);
       if (error.code !== 'auth/popup-closed-by-user') {
-        setError(error.message);
+        setError(`${error.message} (${error.code || 'unknown'})`);
       }
     } finally {
       setLoading(false);

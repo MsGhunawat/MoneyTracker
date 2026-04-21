@@ -86,8 +86,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSwitchToSignup, onFo
       await signInWithPopup(auth, provider);
     } catch (error: any) {
       console.error("Google Login Error:", error);
-      if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
-        setError("Sign in with Google is currently unavailable in this preview. Please use your email instead.");
+      if (error.code === 'auth/unauthorized-domain') {
+        setError("Domain not authorized. Please add this domain to your Firebase Console authorized domains list.");
+      } else if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
+        setError(`${error.message} (${error.code || 'unknown'})`);
       }
     } finally {
       setLoading(false);

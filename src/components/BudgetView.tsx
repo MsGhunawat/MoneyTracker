@@ -4,20 +4,23 @@ import { MotiView } from "moti";
 import { ArrowLeft, Wallet, ShoppingCart, CreditCard, Banknote } from "lucide-react-native";
 import Svg, { Path } from "react-native-svg";
 import tw from "twrnc";
+import { Currency } from "../types";
 import { formatCurrency } from "../utils";
 
 interface BudgetViewProps {
   monthlyBudget: number;
-  setMonthlyBudget: (value: number) => void;
+  setMonthlyBudget: (value: number | ((prev: number) => number)) => void;
   setActiveTab: (tab: any) => void;
   previousTab: string;
+  currency: Currency;
 }
 
 export const BudgetView: React.FC<BudgetViewProps> = ({ 
   monthlyBudget, 
   setMonthlyBudget, 
   setActiveTab,
-  previousTab
+  previousTab,
+  currency
 }) => {
   const [inputValue, setInputValue] = useState(monthlyBudget.toString());
 
@@ -97,7 +100,7 @@ export const BudgetView: React.FC<BudgetViewProps> = ({
                 <Text style={tw`text-[8px] font-bold text-slate-400 uppercase tracking-widest`}>Enter Budget</Text>
               </View>
               <TextInput 
-                value={inputValue.startsWith('₹') ? inputValue : `₹${inputValue}`}
+                value={inputValue.startsWith(currency.symbol) ? inputValue : `${currency.symbol}${inputValue}`}
                 onChangeText={(val) => {
                   const numericVal = val.replace(/[^0-9]/g, '');
                   setInputValue(numericVal);

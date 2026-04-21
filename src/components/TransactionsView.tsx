@@ -10,7 +10,7 @@ import {
 } from "lucide-react-native";
 import { format, parseISO } from "date-fns";
 import tw from "twrnc";
-import { Transaction } from "../types";
+import { Transaction, Currency } from "../types";
 import { formatCurrency } from "../utils";
 import { CategoryIcon } from "./CategoryIcon";
 
@@ -20,6 +20,7 @@ interface TransactionsViewProps {
   setActiveTab: (tab: any) => void;
   handleTransactionClick: (tx: Transaction) => void;
   categories: any[];
+  currency: Currency;
 }
 
 export const TransactionsView: React.FC<TransactionsViewProps> = ({
@@ -28,6 +29,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
   setActiveTab,
   handleTransactionClick,
   categories,
+  currency,
 }) => {
   return (
     <View style={tw`flex-1 bg-slate-50`}>
@@ -80,7 +82,7 @@ export const TransactionsView: React.FC<TransactionsViewProps> = ({
               </View>
               <View style={tw`items-end`}>
                 <Text style={tw`font-bold text-sm ${t.type === "income" ? "text-emerald-600" : "text-slate-800"}`}>
-                  {t.type === "income" ? "+" : "-"}{formatCurrency(t.amount)}
+                  {t.type === "income" ? "+" : "-"}{formatCurrency(t.amount, currency)}
                 </Text>
               </View>
             </TouchableOpacity>

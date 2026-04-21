@@ -12,8 +12,9 @@ import { Transaction, Bill, Account, Currency, SUPPORTED_CURRENCIES } from "./ty
 import { format, subMonths, subYears, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
 import tw from "twrnc";
 import { requestSMSPermissions, syncRecentSMS, SyncRange } from "./services/smsService";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { AuthWrapper } from "./components/auth/AuthWrapper";
+import * as dataService from "./services/dataService";
 
 // Components
 import { BottomNav } from "./components/BottomNav";
@@ -38,6 +39,15 @@ import {
 } from "./constants";
 
 export default function App() {
+  return (
+    <AuthProvider>
+      <MainTracker />
+    </AuthProvider>
+  );
+}
+
+function MainTracker() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"dashboard" | "summary" | "transactionForm" | "bills" | "settings" | "transactions" | "categoryDetail" | "budget">("dashboard");
   const [previousTab, setPreviousTab] = useState<string>("dashboard");
   const [monthlyBudget, setMonthlyBudget] = useState(35000);
@@ -47,93 +57,63 @@ export default function App() {
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showAllCategories, setShowAllCategories] = useState(false);
   const [showBalance, setShowBalance] = useState(false);
-  const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [bills, setBills] = useState<Bill[]>(MOCK_BILLS);
-  const [cashInHand, setCashInHand] = useState(4400); // Current month's cash
+  const [cashInHand, setCashInHand] = useState(0); 
   const [showCarryForwardModal, setShowCarryForwardModal] = useState(false);
-  const [pendingCarryForward, setPendingCarryForward] = useState(4500); // Mocked previous month balance
+  const [pendingCarryForward, setPendingCarryForward] = useState(0); 
   const [categories, setCategories] = useState(INITIAL_CATEGORIES);
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [selectedIcon, setSelectedIcon] = useState<string>("Layers");
   const [isSyncingSMS, setIsSyncingSMS] = useState(false);
-
-  const [accounts] = useState<Account[]>([
-    {
-      id: "acc-1",
-      name: "AU Small Finance A/C",
-      number: "ASFB-x1377",
-      amount: 462537,
-      type: "bank",
-      updatedAt: "2026-04-02T10:00:00Z"
-    },
-    {
-      id: "acc-2",
-      name: "SBI Group A/C",
-      number: "SBIG-x3379",
-      amount: 10205,
-      type: "bank",
-      updatedAt: "2026-04-05T10:00:00Z",
-      isEstimated: true
-    },
-    {
-      id: "acc-3",
-      name: "SBI Group A/C",
-      number: "SBIG-x8361",
-      amount: 154734,
-      type: "bank",
-      updatedAt: "2026-04-05T10:00:00Z",
-      isEstimated: true
-    },
-    {
-      id: "acc-4",
-      name: "SBI Group A/C",
-      number: "SBIG-x3309",
-      amount: 2139714,
-      type: "bank",
-      updatedAt: "2026-04-05T10:00:00Z"
-    },
-    {
-      id: "cc-1",
-      name: "Axis CC",
-      number: "AXIS-x5334",
-      amount: 0,
-      type: "credit_card",
-      updatedAt: "2026-04-05T10:00:00Z"
-    },
-    {
-      id: "cc-2",
-      name: "Axis CC",
-      number: "UTIB-x0587",
-      amount: 2275,
-      type: "credit_card",
-      updatedAt: "2026-04-05T10:00:00Z",
-      isEstimated: true
-    },
-    {
-      id: "cc-3",
-      name: "Axis CC",
-      number: "UTIB-x5334",
-      amount: 4514,
-      type: "credit_card",
-      updatedAt: "2026-04-05T10:00:00Z",
-      isEstimated: true
-    },
-    {
-      id: "cc-4",
-      name: "ICICI CC",
-      number: "ICIC-x2006",
-      amount: 43377,
-      type: "credit_card",
-      updatedAt: "2026-04-04T10:00:00Z"
-    }
-  ]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const [summaryType, setSummaryType] = useState<"monthly" | "yearly">("monthly");
   const [summaryDate, setSummaryDate] = useState(new Date());
   const [summaryWindowDate, setSummaryWindowDate] = useState(new Date());
-  const [summaryView, setSummaryView] = useState<"overview" | "spendAreas">("overview");
+  const [summaryView, setSummaryView] = useState<"overview" | "spendAreas" | "budget">("overview");
   const [currency, setCurrency] = useState<Currency>(SUPPORTED_CURRENCIES[0]);
+
+  // Sync with Firestore
+  useEffect(() => {
+    if (!user) {
+      setTransactions([]);
+      setAccounts([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+
+    // Fetch user settings
+    const loadUserSettings = async () => {
+      const settings = await dataService.getUserSettings(user.uid);
+      if (settings) {
+        if (settings.monthlyBudget) setMonthlyBudget(settings.monthlyBudget);
+        if (settings.cashInHand !== undefined) setCashInHand(settings.cashInHand);
+      }
+    };
+
+    loadUserSettings();
+
+    // Subscribe to transactions
+    const unsubTransactions = dataService.subscribeToTransactions(user.uid, (txs) => {
+      setTransactions(txs);
+      setIsLoading(false);
+    });
+
+    // Subscribe to accounts
+    const unsubAccounts = dataService.subscribeToAccounts(user.uid, (accs) => {
+      setAccounts(accs);
+    });
+
+    return () => {
+      unsubTransactions();
+      unsubAccounts();
+    };
+  }, [user]);
 
   useEffect(() => {
     const loadCurrency = async () => {
@@ -154,6 +134,20 @@ export default function App() {
   const handleCurrencyChange = async (newCurrency: Currency) => {
     setCurrency(newCurrency);
     await AsyncStorage.setItem('user_currency', JSON.stringify(newCurrency));
+  };
+
+  const updateBudget = async (value: number) => {
+    setMonthlyBudget(value);
+    if (user) {
+      await dataService.updateUserSettings(user.uid, { monthlyBudget: value });
+    }
+  };
+
+  const updateCashInHand = async (value: number) => {
+    setCashInHand(value);
+    if (user) {
+      await dataService.updateUserSettings(user.uid, { cashInHand: value });
+    }
   };
 
   useEffect(() => {
@@ -181,22 +175,23 @@ export default function App() {
         if (extracted.length > 0) {
           const newTxs = extracted.map(ext => ({
             ...ext,
-            id: `sms-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             paymentMethod: ext.paymentMethod || "upi",
             isSpend: ext.isSpend ?? true,
           } as Transaction));
           
-          setTransactions(prev => {
-            // Filter out exact duplicates by description and amount on the same day
-            const uniqueNew = newTxs.filter(nt => 
-              !prev.some(pt => 
-                pt.description === nt.description && 
-                pt.amount === nt.amount && 
-                pt.date.split('T')[0] === nt.date.split('T')[0]
-              )
-            );
-            return [...uniqueNew, ...prev];
-          });
+          if (user) {
+            for (const tx of newTxs) {
+              // Filter out exact duplicates by description and amount on the same day
+              const isDup = transactions.some(pt => 
+                pt.description === tx.description && 
+                pt.amount === tx.amount && 
+                pt.date.split('T')[0] === tx.date.split('T')[0]
+              );
+              if (!isDup) {
+                await dataService.addTransaction(user.uid, tx);
+              }
+            }
+          }
           
           alert(`Synced ${newTxs.length} transactions from your SMS messages!`);
         }
@@ -209,10 +204,12 @@ export default function App() {
   };
 
   const handleCarryForward = async (confirm: boolean) => {
+    if (!user) return;
+    
     if (confirm) {
-      setCashInHand(prev => prev + pendingCarryForward);
+      await updateCashInHand(cashInHand + pendingCarryForward);
       const carryForwardTx: Transaction = {
-        id: `cf-${Date.now()}`,
+        id: "",
         amount: pendingCarryForward,
         description: "Cash carried forward from last month",
         category: "Income",
@@ -221,10 +218,10 @@ export default function App() {
         paymentMethod: "cash",
         isSpend: false
       };
-      setTransactions(prev => [carryForwardTx, ...prev]);
+      await dataService.addTransaction(user.uid, carryForwardTx);
     } else {
       const miscSpendTx: Transaction = {
-        id: `ms-${Date.now()}`,
+        id: "",
         amount: pendingCarryForward,
         description: "Unaccounted cash from last month",
         category: "Miscellaneous",
@@ -233,7 +230,7 @@ export default function App() {
         paymentMethod: "cash",
         isSpend: true
       };
-      setTransactions(prev => [miscSpendTx, ...prev]);
+      await dataService.addTransaction(user.uid, miscSpendTx);
     }
     const monthKey = `carry_forward_${format(new Date(), "yyyy-MM")}`;
     await AsyncStorage.setItem(monthKey, "true");
@@ -265,14 +262,18 @@ export default function App() {
     setActiveTab("transactionForm");
   };
 
-  const saveTransaction = () => {
-    if (!editingTransaction) return;
+  const saveTransaction = async () => {
+    if (!editingTransaction || !user) return;
     
-    if (editingTransaction.id === "") {
-      const newTx = { ...editingTransaction, id: Date.now().toString() };
-      setTransactions(prev => [newTx, ...prev]);
-    } else {
-      setTransactions(prev => prev.map(t => t.id === editingTransaction.id ? editingTransaction : t));
+    try {
+      if (editingTransaction.id === "") {
+        await dataService.addTransaction(user.uid, editingTransaction);
+      } else {
+        await dataService.updateTransaction(user.uid, editingTransaction);
+      }
+    } catch (error) {
+      console.error("Error saving transaction:", error);
+      alert("Failed to save transaction. Please check your connection.");
     }
     
     setActiveTab(previousTab as any);
@@ -280,9 +281,16 @@ export default function App() {
     setEditingTransaction(null);
   };
 
-  const deleteTransaction = () => {
-    if (!editingTransaction || editingTransaction.id === "") return;
-    setTransactions(prev => prev.filter(t => t.id !== editingTransaction.id));
+  const deleteTransaction = async () => {
+    if (!editingTransaction || editingTransaction.id === "" || !user) return;
+    
+    try {
+      await dataService.deleteTransaction(user.uid, editingTransaction.id);
+    } catch (error) {
+      console.error("Error deleting transaction:", error);
+      alert("Failed to delete transaction.");
+    }
+    
     setActiveTab(previousTab as any);
     setSelectedTransaction(null);
     setEditingTransaction(null);
@@ -458,6 +466,7 @@ export default function App() {
                       monthlyBudget={monthlyBudget}
                       categories={categories}
                       currency={currency}
+                      updateCashInHand={updateCashInHand}
                     />
                   </MotiView>
                 )}
@@ -601,7 +610,7 @@ export default function App() {
                   >
                     <BudgetView 
                       monthlyBudget={monthlyBudget}
-                      setMonthlyBudget={setMonthlyBudget}
+                      setMonthlyBudget={updateBudget}
                       setActiveTab={setActiveTab}
                       previousTab={previousTab}
                       currency={currency}

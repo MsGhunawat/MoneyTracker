@@ -16,7 +16,7 @@ import { BarChart, PieChart, LineChart } from "react-native-gifted-charts";
 import Svg, { Circle } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
 import tw from "twrnc";
-import { Transaction } from "../types";
+import { Transaction, Currency } from "../types";
 import { CATEGORY_COLORS } from "../constants";
 import { formatCurrency } from "../utils";
 import { CategoryIcon } from "./CategoryIcon";
@@ -28,8 +28,8 @@ interface SummaryProps {
   setSummaryDate: (date: Date | ((prev: Date) => Date)) => void;
   summaryWindowDate: Date;
   setSummaryWindowDate: (date: Date | ((prev: Date) => Date)) => void;
-  summaryView: "overview" | "spendAreas";
-  setSummaryView: (view: "overview" | "spendAreas") => void;
+  summaryView: "overview" | "spendAreas" | "budget";
+  setSummaryView: (view: "overview" | "spendAreas" | "budget") => void;
   trendData: any[];
   totalSummarySpend: number;
   summarySpendAreas: any[];
@@ -40,6 +40,7 @@ interface SummaryProps {
   handleTransactionClick: (tx: Transaction) => void;
   openAddTransaction: () => void;
   categories: any[];
+  currency: Currency;
 }
 
 export const Summary: React.FC<SummaryProps> = ({
@@ -61,6 +62,7 @@ export const Summary: React.FC<SummaryProps> = ({
   handleTransactionClick,
   openAddTransaction,
   categories,
+  currency,
 }) => {
   const screenWidth = Dimensions.get('window').width;
   const chartWidth = screenWidth - 110;
