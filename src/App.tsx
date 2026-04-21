@@ -131,7 +131,13 @@ export default function App() {
 
   const [summaryType, setSummaryType] = useState<"monthly" | "yearly">("monthly");
   const [summaryDate, setSummaryDate] = useState(new Date());
+  const [summaryWindowDate, setSummaryWindowDate] = useState(new Date());
   const [summaryView, setSummaryView] = useState<"overview" | "spendAreas">("overview");
+
+  useEffect(() => {
+    // Keep window in sync when selecting a date outside current window context if needed
+    // But for now, we want stability, so clicking a bar doesn't change summaryWindowDate
+  }, [summaryDate]);
 
   useEffect(() => {
     const checkCarryForward = async () => {
@@ -306,9 +312,12 @@ export default function App() {
     }))
     .sort((a, b) => b.amount - a.amount);
 
+  const currentDate = new Date();
+
   const trendData = summaryType === "monthly" 
     ? Array.from({ length: 6 }).map((_, i) => {
-        const d = subMonths(summaryDate, 5 - i);
+        const d = subMonths(summaryWindowDate, 5 - i);
+        // Only show if not in future relative to currentDate
         const monthTransactions = transactions.filter(t => {
           const date = parseISO(t.date);
           return isWithinInterval(date, {
@@ -321,12 +330,13 @@ export default function App() {
           .reduce((sum, t) => sum + t.amount, 0);
         return {
           name: format(d, "MMM"),
-          amount,
-          date: d
+          amount: d > currentDate ? 0 : amount, // Zero out future amounts
+          date: d,
+          isFuture: d > currentDate
         };
       })
-    : Array.from({ length: 5 }).map((_, i) => {
-        const d = subYears(summaryDate, 4 - i);
+    : Array.from({ length: 6 }).map((_, i) => {
+        const d = subYears(summaryWindowDate, 5 - i);
         const yearTransactions = transactions.filter(t => {
           const date = parseISO(t.date);
           return date.getFullYear() === d.getFullYear();
@@ -336,8 +346,9 @@ export default function App() {
           .reduce((sum, t) => sum + t.amount, 0);
         return {
           name: format(d, "yyyy"),
-          amount,
-          date: d
+          amount: d.getFullYear() > currentDate.getFullYear() ? 0 : amount,
+          date: d,
+          isFuture: d.getFullYear() > currentDate.getFullYear()
         };
       });
 
@@ -459,6 +470,8 @@ export default function App() {
                       setSummaryType={setSummaryType}
                       summaryDate={summaryDate}
                       setSummaryDate={setSummaryDate}
+                      summaryWindowDate={summaryWindowDate}
+                      setSummaryWindowDate={setSummaryWindowDate}
                       summaryView={summaryView}
                       setSummaryView={setSummaryView}
                       trendData={trendData}

@@ -49,7 +49,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange, on
       { shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.05, shadowRadius: 20 }
     ]}>
       <NavButton id="dashboard" icon={LayoutDashboard} label="Home" />
-      <NavButton id="summary" icon={PieChart} label="Stats" />
+      <NavButton id="summary" icon={PieChart} label="Summary" />
       
       <View style={tw`px-2`}>
         <TouchableOpacity 

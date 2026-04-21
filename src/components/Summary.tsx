@@ -11,7 +11,7 @@ import {
   Plus,
   ArrowUpRight
 } from "lucide-react-native";
-import { format, subMonths, subYears, addMonths, addYears, parseISO } from "date-fns";
+import { format, subMonths, subYears, addMonths, addYears, parseISO, endOfMonth } from "date-fns";
 import { BarChart, PieChart, LineChart } from "react-native-gifted-charts";
 import Svg, { Circle } from "react-native-svg";
 import { LinearGradient } from "expo-linear-gradient";
@@ -26,6 +26,8 @@ interface SummaryProps {
   setSummaryType: (type: "monthly" | "yearly") => void;
   summaryDate: Date;
   setSummaryDate: (date: Date | ((prev: Date) => Date)) => void;
+  summaryWindowDate: Date;
+  setSummaryWindowDate: (date: Date | ((prev: Date) => Date)) => void;
   summaryView: "overview" | "spendAreas";
   setSummaryView: (view: "overview" | "spendAreas") => void;
   trendData: any[];
@@ -45,6 +47,8 @@ export const Summary: React.FC<SummaryProps> = ({
   setSummaryType,
   summaryDate,
   setSummaryDate,
+  summaryWindowDate,
+  setSummaryWindowDate,
   summaryView,
   setSummaryView,
   trendData,
@@ -59,20 +63,31 @@ export const Summary: React.FC<SummaryProps> = ({
   categories,
 }) => {
   const screenWidth = Dimensions.get('window').width;
-  const chartWidth = screenWidth - 80;
+  const chartWidth = screenWidth - 110;
 
-  const barData = trendData.map(entry => {
-    const isSelected = summaryType === 'monthly' 
-      ? format(entry.date, 'yyyy-MM') === format(summaryDate, 'yyyy-MM')
-      : entry.date.getFullYear() === summaryDate.getFullYear();
-    return {
-      value: entry.amount,
-      label: entry.name,
-      frontColor: isSelected ? "#6366F1" : "#E2E8F0",
-      dataPointColor: isSelected ? "#6366F1" : "#94A3B8",
-      onPress: Platform.OS === 'web' ? undefined : () => setSummaryDate(entry.date)
-    };
-  });
+  // Stable maxValue across selections within the same window
+  const maxInTrend = Math.max(...trendData.map(d => d.amount), 0);
+  const maxValue = Math.max(maxInTrend, 500);
+
+  const barData = trendData
+    .filter(entry => !entry.isFuture)
+    .map(entry => {
+      const isSelected = summaryType === 'monthly' 
+        ? format(entry.date, 'yyyy-MM') === format(summaryDate, 'yyyy-MM')
+        : entry.date.getFullYear() === summaryDate.getFullYear();
+      return {
+        value: entry.amount,
+        label: entry.name,
+        frontColor: isSelected ? "#4F46E5" : "#E2E8F0",
+        labelTextStyle: tw`text-[8px] font-bold ${isSelected ? "text-indigo-600" : "text-slate-400"}`,
+        onPress: () => setSummaryDate(entry.date),
+        topLabelComponent: () => (
+          <Text style={tw`text-[6px] font-bold ${isSelected ? "text-indigo-600" : "text-slate-400"} mb-1`}>
+            {entry.amount > 0 ? `₹${(entry.amount/1000).toFixed(summaryType === 'yearly' ? 0 : 1)}k` : ''}
+          </Text>
+        )
+      };
+    });
 
   const pieData = summarySpendAreas.map(area => {
     const cat = categories.find(c => c.label === area.category);
@@ -108,7 +123,9 @@ export const Summary: React.FC<SummaryProps> = ({
                 <ArrowLeft size={20} color="white" />
               </TouchableOpacity>
               <View>
-                <Text style={tw`text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1`}>Financial Insights</Text>
+                <Text style={tw`text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1`}>
+                  {summaryType === "monthly" ? "Monthly Summary" : "Yearly Summary"}
+                </Text>
                 <Text style={tw`text-xl font-extrabold tracking-tight text-white`}>
                   {summaryType === "monthly" ? format(summaryDate, "MMMM yyyy") : format(summaryDate, "yyyy")}
                 </Text>
@@ -146,7 +163,11 @@ export const Summary: React.FC<SummaryProps> = ({
           <View style={tw`mb-6`}>
             <View style={tw`flex-row items-center justify-between px-2 mb-6`}>
               <TouchableOpacity 
-                onPress={() => setSummaryDate(prev => summaryType === "monthly" ? subMonths(prev, 1) : subYears(prev, 1))}
+                onPress={() => {
+                  const update = summaryType === "monthly" ? subMonths : subYears;
+                  setSummaryDate(prev => update(prev, 1));
+                  setSummaryWindowDate(prev => update(prev, 1)); // Shift window by 1 unit
+                }}
                 style={tw`p-2 bg-white rounded-xl shadow-sm border border-slate-100`}
               >
                 <ChevronLeft size={18} color="#475569" />
@@ -157,7 +178,24 @@ export const Summary: React.FC<SummaryProps> = ({
                 </Text>
               </View>
               <TouchableOpacity 
-                onPress={() => setSummaryDate(prev => summaryType === "monthly" ? addMonths(prev, 1) : addYears(prev, 1))}
+                onPress={() => {
+                  const now = new Date();
+                  const update = summaryType === "monthly" ? addMonths : addYears;
+                  const nextDate = update(summaryDate, 1);
+                  const nextWindowDate = update(summaryWindowDate, 1);
+                  
+                  if (summaryType === "monthly") {
+                    if (nextDate <= endOfMonth(now)) {
+                      setSummaryDate(nextDate);
+                      setSummaryWindowDate(nextWindowDate);
+                    }
+                  } else {
+                    if (nextDate.getFullYear() <= now.getFullYear()) {
+                      setSummaryDate(nextDate);
+                      setSummaryWindowDate(nextWindowDate);
+                    }
+                  }
+                }}
                 style={tw`p-2 bg-white rounded-xl shadow-sm border border-slate-100`}
               >
                 <ChevronRight size={18} color="#475569" />
@@ -177,37 +215,25 @@ export const Summary: React.FC<SummaryProps> = ({
                    <Text style={tw`text-[8px] font-bold text-emerald-600`}>+12.5%</Text>
                 </View>
               </View>
-              <View style={tw`h-44 w-full`}>
-                <LineChart
+              <View style={tw`h-52 w-full items-center`}>
+                <BarChart
                   data={barData}
                   width={chartWidth}
                   height={150}
-                  noOfSections={3}
-                  spacing={chartWidth / 6.5}
-                  initialSpacing={15}
-                  color="#6366F1"
-                  thickness={3}
-                  startFillColor="rgba(99, 102, 241, 0.2)"
-                  endFillColor="rgba(99, 102, 241, 0.01)"
-                  startOpacity={0.4}
-                  endOpacity={0.1}
-                  curved
+                  barWidth={20}
+                  spacing={16}
+                  initialSpacing={10}
+                  roundedTop
                   hideRules
-                  yAxisThickness={0}
                   xAxisThickness={0}
-                  yAxisTextStyle={tw`text-[8px] font-bold text-slate-400`}
+                  yAxisThickness={0}
+                  hideYAxisText
+                  yAxisLabelWidth={0}
+                  isAnimated={false}
+                  maxValue={maxValue * 1.2}
+                  noOfSections={3}
                   xAxisLabelTextStyle={tw`text-[8px] font-bold text-slate-400`}
-                  pointerConfig={Platform.OS === 'web' ? undefined : {
-                    pointerStripColor: '#6366F1',
-                    pointerStripWidth: 2,
-                    pointerColor: '#6366F1',
-                    radius: 4,
-                    pointerLabelComponent: (items: any) => (
-                      <View style={tw`bg-slate-900 px-2 py-1 rounded-lg -ml-4`}>
-                        <Text style={tw`text-white text-[8px] font-bold`}>{items[0].value ? `₹${items[0].value.toLocaleString()}` : '₹0'}</Text>
-                      </View>
-                    ),
-                  }}
+                  onPress={(item: any) => setSummaryDate(item.date)}
                 />
               </View>
             </View>
