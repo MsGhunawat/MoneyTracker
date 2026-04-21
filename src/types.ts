@@ -1,3 +1,19 @@
+export interface Currency {
+  code: string;
+  symbol: string;
+  label: string;
+  locale: string;
+}
+
+export const SUPPORTED_CURRENCIES: Currency[] = [
+  { code: 'INR', symbol: '₹', label: 'Indian Rupee', locale: 'en-IN' },
+  { code: 'USD', symbol: '$', label: 'US Dollar', locale: 'en-US' },
+  { code: 'EUR', symbol: '€', label: 'Euro', locale: 'de-DE' },
+  { code: 'GBP', symbol: '£', label: 'British Pound', locale: 'en-GB' },
+  { code: 'JPY', symbol: '¥', label: 'Japanese Yen', locale: 'ja-JP' },
+  { code: 'AED', symbol: 'د.إ', label: 'UAE Dirham', locale: 'ar-AE' },
+];
+
 export type Transaction = {
   id: string;
   amount: number;

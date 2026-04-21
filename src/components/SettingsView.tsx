@@ -24,6 +24,8 @@ import { useAuth } from "../contexts/AuthContext";
 import { signOut } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { LinearGradient } from "expo-linear-gradient";
+import { Currency, SUPPORTED_CURRENCIES } from "../types";
+import { X, Check } from "lucide-react-native";
 
 interface SettingsItemProps {
   icon: React.ReactNode;
@@ -61,13 +63,14 @@ const SettingsItem: React.FC<SettingsItemProps> = ({ icon, label, value, onPress
   </TouchableOpacity>
 );
 
-export const SettingsView: React.FC = () => {
+export const SettingsView: React.FC<{ currency: Currency, setCurrency: (c: Currency) => void }> = ({ currency, setCurrency }) => {
   const { user } = useAuth();
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [smsSyncEnabled, setSmsSyncEnabled] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showCurrencyModal, setShowCurrencyModal] = useState(false);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -163,9 +166,9 @@ export const SettingsView: React.FC = () => {
             <SettingsItem 
               icon={<Wallet />} 
               label="Default Currency" 
-              value="INR (₹)" 
+              value={`${currency.code} (${currency.symbol})`}
               color="#6366F1"
-              onPress={handleCurrencySelect}
+              onPress={() => setShowCurrencyModal(true)}
             />
             <View style={tw`mx-5 h-[1px] bg-slate-50`} />
             <SettingsItem 
@@ -312,17 +315,75 @@ export const SettingsView: React.FC = () => {
           </MotiView>
         )}
 
-        <View style={tw`items-center pb-8`}>
-          <View style={tw`flex-row items-center gap-2 mb-1`}>
-            <View style={tw`w-5 h-5 bg-indigo-600 rounded-lg items-center justify-center`}>
-                <Wallet size={10} color="white" strokeWidth={3} />
+          <View style={tw`items-center pb-8`}>
+            <View style={tw`flex-row items-center gap-2 mb-1`}>
+              <View style={tw`w-5 h-5 bg-indigo-600 rounded-lg items-center justify-center`}>
+                  <Wallet size={10} color="white" strokeWidth={3} />
+              </View>
+              <Text style={tw`text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]`}>MoneyTracker Premium</Text>
             </View>
-            <Text style={tw`text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]`}>MoneyTracker Premium</Text>
+            <Text style={tw`text-[10px] text-slate-300 font-medium`}>Version 1.0.4 (Build 2026.04.19)</Text>
+            <Text style={tw`text-[9px] text-slate-200 mt-2`}>Secured with 256-bit Encryption</Text>
           </View>
-          <Text style={tw`text-[10px] text-slate-300 font-medium`}>Version 1.0.4 (Build 2026.04.19)</Text>
-          <Text style={tw`text-[9px] text-slate-200 mt-2`}>Secured with 256-bit Encryption</Text>
-        </View>
-      </ScrollView>
-    </View>
+        </ScrollView>
+
+        {/* Currency Selection Modal */}
+        {showCurrencyModal && (
+          <View style={[tw`absolute inset-0 bg-slate-900/60 z-50 items-center justify-center p-6`, { backgroundColor: 'rgba(15, 23, 42, 0.7)' }]}>
+            <MotiView
+               from={{ opacity: 0, scale: 0.9 }}
+               animate={{ opacity: 1, scale: 1 }}
+               style={tw`bg-white w-full max-w-sm rounded-[32px] overflow-hidden shadow-2xl`}
+            >
+              <View style={tw`p-6 border-b border-slate-100 flex-row justify-between items-center bg-slate-50`}>
+                <View>
+                  <Text style={tw`text-lg font-bold text-slate-800 tracking-tight`}>Select Currency</Text>
+                  <Text style={tw`text-[10px] text-slate-400 font-bold uppercase tracking-widest`}>Primary preference</Text>
+                </View>
+                <TouchableOpacity 
+                  onPress={() => setShowCurrencyModal(false)}
+                  style={tw`p-2 bg-white rounded-xl border border-slate-200 shadow-sm`}
+                >
+                  <X size={18} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={tw`max-h-96`}>
+                {SUPPORTED_CURRENCIES.map((item) => (
+                  <TouchableOpacity
+                    key={item.code}
+                    onPress={() => {
+                      setCurrency(item);
+                      setShowCurrencyModal(false);
+                    }}
+                    style={tw`p-4 flex-row items-center justify-between border-b border-slate-50 ${currency.code === item.code ? 'bg-indigo-50/50' : ''}`}
+                  >
+                    <View style={tw`flex-row items-center gap-4`}>
+                      <View style={tw`w-10 h-10 bg-slate-100 rounded-xl items-center justify-center`}>
+                        <Text style={tw`text-base font-bold text-slate-600`}>{item.symbol}</Text>
+                      </View>
+                      <View>
+                        <Text style={tw`text-sm font-bold text-slate-800`}>{item.label}</Text>
+                        <Text style={tw`text-[10px] text-slate-400 font-medium`}>{item.code}</Text>
+                      </View>
+                    </View>
+                    {currency.code === item.code && (
+                      <View style={tw`w-6 h-6 bg-indigo-500 rounded-full items-center justify-center`}>
+                        <Check size={12} color="white" strokeWidth={4} />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              
+              <View style={tw`p-6 bg-slate-50`}>
+                 <Text style={tw`text-[9px] text-slate-400 text-center font-medium leading-relaxed`}>
+                   Changing currency will update all spend, balance, and trend figures across the application instantly.
+                 </Text>
+              </View>
+            </MotiView>
+          </View>
+        )}
+      </View>
   );
 };

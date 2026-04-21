@@ -83,7 +83,7 @@ export const Summary: React.FC<SummaryProps> = ({
         onPress: () => setSummaryDate(entry.date),
         topLabelComponent: () => (
           <Text style={tw`text-[6px] font-bold ${isSelected ? "text-indigo-600" : "text-slate-400"} mb-1`}>
-            {entry.amount > 0 ? `₹${(entry.amount/1000).toFixed(summaryType === 'yearly' ? 0 : 1)}k` : ''}
+            {entry.amount > 0 ? `${currency.symbol}${(entry.amount/1000).toFixed(summaryType === 'yearly' ? 0 : 1)}k` : ''}
           </Text>
         )
       };
@@ -244,7 +244,7 @@ export const Summary: React.FC<SummaryProps> = ({
             <View style={tw`h-64 w-full items-center justify-center relative`} pointerEvents="none">
             <View style={tw`absolute inset-0 items-center justify-center z-10`} pointerEvents="none">
               <Text style={tw`text-slate-400 text-[10px] font-bold uppercase tracking-widest`}>Total Spend</Text>
-              <Text style={tw`text-2xl font-extrabold text-slate-800 tracking-tight`}>{formatCurrency(totalSummarySpend)}</Text>
+              <Text style={tw`text-2xl font-extrabold text-slate-800 tracking-tight`}>{formatCurrency(totalSummarySpend, currency)}</Text>
             </View>
             <PieChart
               data={pieData}
@@ -306,12 +306,12 @@ export const Summary: React.FC<SummaryProps> = ({
                   <View style={tw`flex-row justify-between items-start`}>
                     <Text style={tw`font-bold text-slate-800 text-sm`}>{area.category}</Text>
                     <View style={tw`items-end`}>
-                      <Text style={tw`font-bold text-slate-800 text-sm`}>{formatCurrency(area.amount)}</Text>
+                      <Text style={tw`font-bold text-slate-800 text-sm`}>{formatCurrency(area.amount, currency)}</Text>
                       <Text style={tw`text-[8px] text-slate-400 font-bold uppercase tracking-widest`}>{area.percentage.toFixed(1)}%</Text>
                     </View>
                   </View>
                   <Text style={tw`text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5`}>
-                    {formatCurrency(area.amount * 0.8)} more than last month
+                    {formatCurrency(area.amount * 0.8, currency)} more than last month
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -348,7 +348,7 @@ export const Summary: React.FC<SummaryProps> = ({
                     </View>
                     <View style={tw`items-end`}>
                       <Text style={tw`font-bold text-sm ${tx.type === "income" ? "text-emerald-600" : "text-slate-800"}`}>
-                        {tx.type === "income" ? "+" : "-"} {formatCurrency(tx.amount)}
+                        {tx.type === "income" ? "+" : "-"} {formatCurrency(tx.amount, currency)}
                       </Text>
                       <Text style={tw`text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-0.5`}>{tx.paymentMethod}</Text>
                     </View>

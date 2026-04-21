@@ -8,7 +8,7 @@ import { View, SafeAreaView, ScrollView, StatusBar } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AnimatePresence, View as MotiView } from "moti";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Transaction, Bill, Account } from "./types";
+import { Transaction, Bill, Account, Currency, SUPPORTED_CURRENCIES } from "./types";
 import { format, subMonths, subYears, startOfMonth, endOfMonth, isWithinInterval, parseISO } from "date-fns";
 import tw from "twrnc";
 import { requestSMSPermissions, syncRecentSMS, SyncRange } from "./services/smsService";
@@ -133,6 +133,28 @@ export default function App() {
   const [summaryDate, setSummaryDate] = useState(new Date());
   const [summaryWindowDate, setSummaryWindowDate] = useState(new Date());
   const [summaryView, setSummaryView] = useState<"overview" | "spendAreas">("overview");
+  const [currency, setCurrency] = useState<Currency>(SUPPORTED_CURRENCIES[0]);
+
+  useEffect(() => {
+    const loadCurrency = async () => {
+      const saved = await AsyncStorage.getItem('user_currency');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          const found = SUPPORTED_CURRENCIES.find(c => c.code === parsed.code);
+          if (found) setCurrency(found);
+        } catch (e) {
+          console.error("Error loading currency", e);
+        }
+      }
+    };
+    loadCurrency();
+  }, []);
+
+  const handleCurrencyChange = async (newCurrency: Currency) => {
+    setCurrency(newCurrency);
+    await AsyncStorage.setItem('user_currency', JSON.stringify(newCurrency));
+  };
 
   useEffect(() => {
     // Keep window in sync when selecting a date outside current window context if needed
@@ -435,6 +457,7 @@ export default function App() {
                       isSyncingSMS={isSyncingSMS}
                       monthlyBudget={monthlyBudget}
                       categories={categories}
+                      currency={currency}
                     />
                   </MotiView>
                 )}
@@ -453,6 +476,7 @@ export default function App() {
                       setActiveTab={setActiveTab}
                       handleTransactionClick={handleTransactionClick}
                       categories={categories}
+                      currency={currency}
                     />
                   </MotiView>
                 )}
@@ -484,6 +508,7 @@ export default function App() {
                       handleTransactionClick={handleTransactionClick}
                       openAddTransaction={openAddTransaction}
                       categories={categories}
+                      currency={currency}
                     />
                   </MotiView>
                 )}
@@ -521,7 +546,10 @@ export default function App() {
                     exit={{ opacity: 0 }}
                     style={tw`flex-1`}
                   >
-                    <BillsView bills={bills} />
+                    <BillsView 
+                      bills={bills} 
+                      currency={currency}
+                    />
                   </MotiView>
                 )}
 
@@ -556,7 +584,10 @@ export default function App() {
                     exit={{ opacity: 0 }}
                     style={tw`flex-1`}
                   >
-                    <SettingsView />
+                    <SettingsView 
+                      currency={currency}
+                      setCurrency={handleCurrencyChange}
+                    />
                   </MotiView>
                 )}
 
@@ -573,6 +604,7 @@ export default function App() {
                       setMonthlyBudget={setMonthlyBudget}
                       setActiveTab={setActiveTab}
                       previousTab={previousTab}
+                      currency={currency}
                     />
                   </MotiView>
                 )}

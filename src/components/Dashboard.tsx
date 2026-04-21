@@ -22,7 +22,7 @@ import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop } from "react-nati
 import { LineChart, PieChart } from "react-native-gifted-charts";
 import { LinearGradient } from "expo-linear-gradient";
 import tw from "twrnc";
-import { Transaction, Account } from "../types";
+import { Transaction, Account, Currency } from "../types";
 import { CATEGORY_COLORS } from "../constants";
 import { formatCurrency } from "../utils";
 import { CategoryIcon } from "./CategoryIcon";
@@ -51,6 +51,7 @@ interface DashboardProps {
   monthlyBudget: number;
   cashInHand: number;
   categories: any[];
+  currency: Currency;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -71,6 +72,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   monthlyBudget,
   cashInHand,
   categories,
+  currency,
 }) => {
   const budget = monthlyBudget || 35000;
   const [showAccountModal, setShowAccountModal] = React.useState(false);
@@ -185,8 +187,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </Text>
                 <Text style={tw`text-xl font-extrabold tracking-tight ${totalMonthlySpend > budget ? "text-white" : "text-emerald-400"}`}>
                   {totalMonthlySpend > budget 
-                    ? formatCurrency(totalMonthlySpend - budget)
-                    : formatCurrency(budget - totalMonthlySpend)}
+                    ? formatCurrency(totalMonthlySpend - budget, currency)
+                    : formatCurrency(budget - totalMonthlySpend, currency)}
                 </Text>
                 <View style={tw`mt-1 px-2 py-0.5 bg-white/10 rounded-full`}>
                   <Text style={tw`text-[7px] font-bold text-white/70`}>24 days left</Text>
@@ -197,12 +199,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <View style={tw`flex-row justify-between w-full max-w-[160px] mt-1`}>
               <View>
                 <Text style={tw`text-[7px] font-bold text-white/30 uppercase tracking-widest`}>Budget</Text>
-                <Text style={tw`text-[9px] font-bold text-white/70`}>{formatCurrency(budget)}</Text>
+                <Text style={tw`text-[9px] font-bold text-white/70`}>{formatCurrency(budget, currency)}</Text>
               </View>
               <View style={tw`items-end`}>
                 <Text style={tw`text-[7px] font-bold text-white/30 uppercase tracking-widest`}>Spent</Text>
                 <Text style={tw`text-[9px] font-bold ${totalMonthlySpend > budget ? "text-red-400" : "text-emerald-400"}`}>
-                  {formatCurrency(totalMonthlySpend)}
+                  {formatCurrency(totalMonthlySpend, currency)}
                 </Text>
               </View>
             </View>
@@ -218,7 +220,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </TouchableOpacity>
               </View>
               <Text style={tw`text-xs font-bold tracking-tight text-white`}>
-                {showBalance ? "₹45,230" : "₹XX,XXX"}
+                {showBalance ? formatCurrency(45230, currency) : `${currency.symbol}XX,XXX`}
               </Text>
             </View>
 
@@ -227,7 +229,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <TrendingUp size={10} color="#818CF8" />
                 <Text style={tw`text-[7px] font-bold text-white/40 uppercase tracking-widest`}>Daily Insights</Text>
               </View>
-              <Text style={tw`text-xs font-bold tracking-tight text-white`}>{formatCurrency(totalMonthlySpend / 30)}</Text>
+              <Text style={tw`text-xs font-bold tracking-tight text-white`}>{formatCurrency(totalMonthlySpend / 30, currency)}</Text>
             </View>
           </View>
         </LinearGradient>
@@ -257,7 +259,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   </View>
                 </View>
                 <Text style={tw`font-bold text-sm ${t.type === "income" ? "text-emerald-600" : "text-slate-800"}`}>
-                  {t.type === "income" ? "+" : "-"}{formatCurrency(t.amount)}
+                  {t.type === "income" ? "+" : "-"}{formatCurrency(t.amount, currency)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -285,7 +287,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 centerLabelComponent={() => (
                   <View style={tw`items-center`}>
                     <Text style={tw`text-[8px] font-bold text-slate-400 uppercase tracking-widest`}>Total</Text>
-                    <Text style={tw`text-sm font-bold text-slate-800`}>{formatCurrency(totalMonthlySpend)}</Text>
+                    <Text style={tw`text-sm font-bold text-slate-800`}>{formatCurrency(totalMonthlySpend, currency)}</Text>
                   </View>
                 )}
                 onPress={Platform.OS === 'web' ? undefined : () => {}}
@@ -311,7 +313,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <View style={tw`flex-1`}>
                       <View style={tw`flex-row justify-between items-center mb-1`}>
                         <Text style={tw`font-bold text-slate-700 text-sm`}>{area.category}</Text>
-                        <Text style={tw`font-bold text-slate-800 text-sm`}>{formatCurrency(area.amount)}</Text>
+                        <Text style={tw`font-bold text-slate-800 text-sm`}>{formatCurrency(area.amount, currency)}</Text>
                       </View>
                       <View style={tw`w-full bg-slate-100 h-1 rounded-full overflow-hidden`}>
                         <View style={[tw`h-full rounded-full`, { width: `${area.percentage}%`, backgroundColor: cat?.color || '#6366F1' }]} />
@@ -352,7 +354,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </View>
               </View>
               <View style={tw`items-end`}>
-                <Text style={tw`text-sm font-bold text-slate-800`}>{formatCurrency(cashInHand)}</Text>
+                <Text style={tw`text-sm font-bold text-slate-800`}>{formatCurrency(cashInHand, currency)}</Text>
                 <Text style={tw`text-[10px] font-bold text-indigo-600 uppercase tracking-widest`}>Details</Text>
               </View>
             </View>
@@ -364,11 +366,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
             
             <View style={tw`flex-row justify-between items-center`}>
               <View>
-                <Text style={tw`text-[10px] font-bold text-slate-800`}>₹24,356</Text>
+                <Text style={tw`text-[10px] font-bold text-slate-800`}>{formatCurrency(24356, currency)}</Text>
                 <Text style={tw`text-[8px] text-slate-400 font-bold uppercase tracking-widest`}>Spend</Text>
               </View>
               <View style={tw`items-end`}>
-                <Text style={tw`text-[10px] font-bold text-slate-800`}>₹28,756</Text>
+                <Text style={tw`text-[10px] font-bold text-slate-800`}>{formatCurrency(28756, currency)}</Text>
                 <Text style={tw`text-[8px] text-slate-400 font-bold uppercase tracking-widest`}>Withdrawn</Text>
               </View>
             </View>
@@ -451,7 +453,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 {accounts.filter(a => a.type === accountModalType).length} Accounts
               </Text>
               <Text style={tw`text-4xl font-black text-white tracking-tighter`}>
-                {formatCurrency(accounts.filter(a => a.type === accountModalType).reduce((sum, a) => sum + a.amount, 0))}
+                {formatCurrency(accounts.filter(a => a.type === accountModalType).reduce((sum, a) => sum + a.amount, 0), currency)}
               </Text>
             </LinearGradient>
 
@@ -493,7 +495,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   <View style={tw`items-end`}>
                     <Text style={tw`font-bold text-slate-800 text-sm`}>
                       {accountModalType === "credit_card" && account.amount > 0 ? "-" : ""}
-                      {formatCurrency(account.amount)}
+                      {formatCurrency(account.amount, currency)}
                     </Text>
                     <Text style={tw`text-[9px] text-slate-400 font-bold`}>
                       {account.isEstimated ? "Estimated Bal" : `Updated ${format(parseISO(account.updatedAt), "dd MMM")}`}
@@ -534,18 +536,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 Current Month
               </Text>
               <Text style={tw`text-4xl font-black text-white tracking-tighter`}>
-                {formatCurrency(cashInHand)}
+                {formatCurrency(cashInHand, currency)}
               </Text>
             </LinearGradient>
 
             <View style={tw`bg-white/5 px-6 py-4 border-b border-white/5 flex-row gap-4 bg-slate-900`}>
               <View style={tw`flex-1`}>
                 <Text style={tw`text-[8px] font-bold text-white/40 uppercase tracking-widest mb-1`}>Total Withdrawn</Text>
-                <Text style={tw`text-lg font-bold text-white`}>₹28,756</Text>
+                <Text style={tw`text-lg font-bold text-white`}>{formatCurrency(28756, currency)}</Text>
               </View>
               <View style={tw`flex-1`}>
                 <Text style={tw`text-[8px] font-bold text-white/40 uppercase tracking-widest mb-1`}>Total Spent</Text>
-                <Text style={tw`text-lg font-bold text-white`}>₹24,356</Text>
+                <Text style={tw`text-lg font-bold text-white`}>{formatCurrency(24356, currency)}</Text>
               </View>
             </View>
 
@@ -573,7 +575,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     </View>
                   </View>
                   <Text style={tw`font-bold text-base ${t.type === "income" ? "text-green-500" : "text-slate-800"}`}>
-                    {t.type === "income" ? "+" : "-"}{formatCurrency(t.amount)}
+                    {t.type === "income" ? "+" : "-"}{formatCurrency(t.amount, currency)}
                   </Text>
                 </TouchableOpacity>
               ))}

@@ -1,9 +1,11 @@
-export const formatCurrency = (amount: number) => {
-  return new Intl.NumberFormat('en-IN', {
+import { Currency, SUPPORTED_CURRENCIES } from '../types';
+
+export const formatCurrency = (amount: number, currency: Currency = SUPPORTED_CURRENCIES[0]) => {
+  return new Intl.NumberFormat(currency.locale, {
     style: 'currency',
-    currency: 'INR',
+    currency: currency.code,
     maximumFractionDigits: 0,
-  }).format(amount).replace('INR', '₹');
+  }).format(amount).replace(currency.code, currency.symbol);
 };
 
 export const formatPaymentMethod = (method: string) => {
